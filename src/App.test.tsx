@@ -5,8 +5,6 @@ import App from "./App";
 describe("App", () => {
   it("アプリ名「札帖」を見出しとして表示する", () => {
     render(<App />);
-    expect(
-      screen.getByRole("heading", { name: /札帖/ }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /札帖/ })).toBeInTheDocument();
   });
 });
