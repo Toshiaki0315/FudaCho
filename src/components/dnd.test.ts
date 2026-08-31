@@ -50,4 +50,8 @@ describe("resolveDragEnd", () => {
   it("ドラッグ元のアイテムがレーンに存在しない場合はnullを返す", () => {
     expect(resolveDragEnd(buildOrder(), "X-9", "InProgress")).toBeNull();
   });
+
+  it("ドロップ先がレーンにもアイテムにも該当しない場合はnullを返す", () => {
+    expect(resolveDragEnd(buildOrder(), "P-1", "X-9")).toBeNull();
+  });
 });
