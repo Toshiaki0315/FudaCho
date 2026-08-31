@@ -12,6 +12,9 @@ export function ParentItemCard({ item, children_ }: ParentItemCardProps) {
   const percent = Math.round(calculateProgress(children_) * 100);
   return (
     <article className="item-card parent-item-card">
+      <span className="item-badge" role="img" aria-label="親アイテム">
+        📋
+      </span>
       <span className="item-id">{item.id}</span>
       <p className="item-summary">{item.summary}</p>
       <progress max={100} value={percent} />

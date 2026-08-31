@@ -14,4 +14,15 @@ describe("ChildItemCard", () => {
     expect(screen.getByText("C-1")).toBeInTheDocument();
     expect(screen.getByText("テストを書く")).toBeInTheDocument();
   });
+
+  it("子アイテムであることを示すバッジを表示する（親カードとの視覚的区別）", () => {
+    const item = createChildItem({
+      id: "C-1",
+      parentId: "P-1",
+      description: "テストを書く",
+    });
+    render(<ChildItemCard item={item} />);
+    const badge = screen.getByLabelText("子アイテム");
+    expect(badge).toHaveTextContent("📝");
+  });
 });

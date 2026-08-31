@@ -68,6 +68,13 @@ describe("ParentItemCard", () => {
     expect(screen.getByText("33%")).toBeInTheDocument();
   });
 
+  it("親アイテムであることを示すバッジを表示する（子カードとの視覚的区別）", () => {
+    const item = createParentItem({ id: "P-1", summary: "設計する" });
+    render(<ParentItemCard item={item} children_={[]} />);
+    const badge = screen.getByLabelText("親アイテム");
+    expect(badge).toHaveTextContent("📋");
+  });
+
   it("進捗率がプログレスバーとして提供される", () => {
     const item = createParentItem({ id: "P-1", summary: "設計する" });
     render(<ParentItemCard item={item} children_={[]} />);
