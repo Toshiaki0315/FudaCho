@@ -9,10 +9,10 @@
 
 ## フェーズ1: 開発環境の構築と基盤設定
 
-- [ ] 1.1 プロジェクトの初期化（Apple Silicon Macネイティブアプリ化を前提とした技術選定: Tauri または Electron 等 ＋ TypeScript, React, Vite等）
-- [ ] 1.2 テスト環境の構築（Vitest, React Testing Library等）とカバレッジ設定（目標90〜100%）
-- [ ] 1.3 Linter / Formatter の設定（ESLint, Prettier）
-- [ ] 1.4 ローカルGitリポジトリの初期化と最初のコミット
+- [x] 1.1 プロジェクトの初期化（Apple Silicon Macネイティブアプリ化を前提とした技術選定: Tauri または Electron 等 ＋ TypeScript, React, Vite等）→ Tauri v2 + React 19 + TypeScript + Vite を採用
+- [x] 1.2 テスト環境の構築（Vitest, React Testing Library等）とカバレッジ設定（目標90〜100%）
+- [x] 1.3 Linter / Formatter の設定（ESLint, Prettier）
+- [x] 1.4 ローカルGitリポジトリの初期化と最初のコミット
 - [ ] 1.5 GitHubリポジトリの作成とリモート登録（※ユーザーに確認してからpushする）
 - [ ] 1.6 CI環境（GitHub Actions等）の構築（テストとカバレッジ計測の自動化。ビルドターゲットは macOS arm64）
 
