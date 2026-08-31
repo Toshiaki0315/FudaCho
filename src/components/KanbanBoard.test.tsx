@@ -1,4 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { createDefaultSettings } from "../domain/settings";
 import { KanbanBoard } from "./KanbanBoard";
@@ -45,7 +46,6 @@ describe("KanbanBoard", () => {
   });
 
   it("onAddItemを渡すと最初のレーンに「＋新規作成」ボタンが表示される", async () => {
-    const { default: userEvent } = await import("@testing-library/user-event");
     const onAddItem = vi.fn();
     const { lanes } = createDefaultSettings();
     render(<KanbanBoard lanes={lanes} onAddItem={onAddItem} />);
