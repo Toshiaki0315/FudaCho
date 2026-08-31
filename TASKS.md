@@ -14,7 +14,7 @@
 - [x] 1.3 Linter / Formatter の設定（ESLint, Prettier）
 - [x] 1.4 ローカルGitリポジトリの初期化と最初のコミット
 - [ ] 1.5 GitHubリポジトリの作成とリモート登録（※ユーザーに確認してからpushする）
-- [ ] 1.6 CI環境（GitHub Actions等）の構築（テストとカバレッジ計測の自動化。ビルドターゲットは macOS arm64）
+- [x] 1.6 CI環境（GitHub Actions等）の構築（テストとカバレッジ計測の自動化。ビルドターゲットは macOS arm64）※ワークフロー作成済み。初回push後にGitHub上での動作確認が必要
 
 ## フェーズ2: コアドメインモデルの実装（TDD）
 
