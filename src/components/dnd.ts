@@ -43,7 +43,8 @@ export function resolveDragEnd(
   }
 
   const toStatus = laneOf(order, overId);
-  /* v8 ignore next 3 -- ドロップ先がレーンにもアイテムにも該当しない防御分岐 */
+  // ドロップ先がレーンにもアイテムにも該当しない防御分岐
+  /* v8 ignore next 3 */
   if (toStatus === null) {
     return null;
   }
