@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createDefaultSettings } from "../domain/settings";
 import { KanbanBoard } from "./KanbanBoard";
 
@@ -42,6 +42,35 @@ describe("KanbanBoard", () => {
     expect(
       screen.getByRole("heading", { name: "おわった" }),
     ).toBeInTheDocument();
+  });
+
+  it("onAddItemを渡すと最初のレーンに「＋新規作成」ボタンが表示される", async () => {
+    const { default: userEvent } = await import("@testing-library/user-event");
+    const onAddItem = vi.fn();
+    const { lanes } = createDefaultSettings();
+    render(<KanbanBoard lanes={lanes} onAddItem={onAddItem} />);
+    const firstLane = screen.getByRole("region", { name: "未着手" });
+    const button = within(firstLane).getByRole("button", {
+      name: "＋新規作成",
+    });
+    await userEvent.setup().click(button);
+    expect(onAddItem).toHaveBeenCalledTimes(1);
+  });
+
+  it("「＋新規作成」ボタンは最初のレーン以外には表示されない", () => {
+    const { lanes } = createDefaultSettings();
+    render(<KanbanBoard lanes={lanes} onAddItem={vi.fn()} />);
+    expect(screen.getAllByRole("button", { name: "＋新規作成" })).toHaveLength(
+      1,
+    );
+  });
+
+  it("onAddItem未指定の場合はボタンを表示しない", () => {
+    const { lanes } = createDefaultSettings();
+    render(<KanbanBoard lanes={lanes} />);
+    expect(
+      screen.queryByRole("button", { name: "＋新規作成" }),
+    ).not.toBeInTheDocument();
   });
 
   it("laneContentで各レーンに内容を描画できる", () => {
