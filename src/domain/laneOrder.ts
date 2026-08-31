@@ -4,9 +4,11 @@ import { ALL_STATUSES, type Status } from "./settings";
 export type LaneOrder = Record<Status, string[]>;
 
 export function createEmptyLaneOrder(): LaneOrder {
-  return Object.fromEntries(
-    ALL_STATUSES.map((status) => [status, []]),
-  ) as LaneOrder;
+  const order = {} as LaneOrder;
+  for (const status of ALL_STATUSES) {
+    order[status] = [];
+  }
+  return order;
 }
 
 function findLaneOf(order: LaneOrder, itemId: string): Status | null {
