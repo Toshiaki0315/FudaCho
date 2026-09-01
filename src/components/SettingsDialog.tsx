@@ -93,9 +93,16 @@ export function SettingsDialog({
                   value={lane.wipLimit ?? ""}
                   onChange={(e) => setWipLimit(index, e.target.value)}
                 />
-                {lane.isDefaultEntry && (
-                  <span className="settings-lane-tag">投入先</span>
-                )}
+                <span
+                  className={
+                    lane.isDefaultEntry
+                      ? "settings-lane-tag is-entry"
+                      : "settings-lane-tag"
+                  }
+                  aria-hidden={!lane.isDefaultEntry}
+                >
+                  {lane.isDefaultEntry ? "投入先" : ""}
+                </span>
                 <button
                   type="button"
                   disabled={index === 0}

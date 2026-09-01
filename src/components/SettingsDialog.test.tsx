@@ -35,6 +35,17 @@ describe("SettingsDialog", () => {
     expect(within(rows[1]).queryByText("投入先")).not.toBeInTheDocument();
   });
 
+  it("バッジのスロットは全行に存在し、投入先以外は空白でボタン位置が揃う", () => {
+    const { container } = renderDialog();
+    const slots = container.querySelectorAll(".settings-lane-tag");
+    expect(slots).toHaveLength(5);
+    expect(slots[0]).toHaveTextContent("投入先");
+    for (const slot of Array.from(slots).slice(1)) {
+      expect(slot).toHaveTextContent("");
+      expect(slot).toHaveAttribute("aria-hidden", "true");
+    }
+  });
+
   it("プロジェクト名とレーン名を変更して保存できる（IDは不変）", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();

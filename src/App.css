@@ -271,12 +271,17 @@ body {
 }
 
 .settings-lane-tag {
+  flex: 0 0 48px;
   font-size: 11px;
+  text-align: center;
+  padding: 2px 0;
+  white-space: nowrap;
+}
+
+.settings-lane-tag.is-entry {
   color: #0969da;
   background-color: #ddf4ff;
   border-radius: 8px;
-  padding: 2px 6px;
-  white-space: nowrap;
 }
 
 .settings-lane-row .settings-wip-input {
