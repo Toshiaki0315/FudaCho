@@ -37,13 +37,29 @@ export type ChildItemPatch = Partial<
   Omit<ChildItem, "id" | "laneId" | "parentId">
 >;
 
-interface BoardState {
+/** SQLite等に保存するボードの状態一式。 */
+export interface PersistedBoard {
   settings: Settings;
   parents: Record<string, ParentItem>;
   children: Record<string, ChildItem>;
   laneOrder: LaneOrder;
   nextParentNumber: number;
   nextChildNumber: number;
+}
+
+export function selectPersisted(state: PersistedBoard): PersistedBoard {
+  return {
+    settings: state.settings,
+    parents: state.parents,
+    children: state.children,
+    laneOrder: state.laneOrder,
+    nextParentNumber: state.nextParentNumber,
+    nextChildNumber: state.nextChildNumber,
+  };
+}
+
+interface BoardState extends PersistedBoard {
+  hydrate: (persisted: PersistedBoard) => void;
   addParent: (input: AddParentInput) => string;
   addChild: (input: AddChildInput & { parentId: string }) => string;
   updateSettings: (settings: Settings) => void;
@@ -72,6 +88,11 @@ function initialState() {
 
 export const useBoardStore = create<BoardState>((set, get) => ({
   ...initialState(),
+
+  hydrate(persisted) {
+    validateLanes(persisted.settings.lanes);
+    set(selectPersisted(persisted));
+  },
 
   addParent(input) {
     const entryLane = findDefaultEntryLane(get().settings.lanes);

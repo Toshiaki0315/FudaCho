@@ -392,6 +392,50 @@ describe("boardStore", () => {
     });
   });
 
+  describe("hydrate / selectPersisted（永続化）", () => {
+    it("selectPersistedで永続化対象の状態を取り出せる", async () => {
+      const { selectPersisted } = await import("./boardStore");
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      const persisted = selectPersisted(useBoardStore.getState());
+      expect(persisted.settings.projectName).toBe("札帖");
+      expect(persisted.parents["P-1"].summary).toBe("設計する");
+      expect(persisted.laneOrder["lane-1"]).toEqual(["P-1"]);
+      expect(persisted.nextParentNumber).toBe(2);
+      expect(Object.keys(persisted)).toEqual([
+        "settings",
+        "parents",
+        "children",
+        "laneOrder",
+        "nextParentNumber",
+        "nextChildNumber",
+      ]);
+    });
+
+    it("hydrateで保存済みの状態を復元できる", async () => {
+      const { selectPersisted } = await import("./boardStore");
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      const persisted = selectPersisted(useBoardStore.getState());
+      useBoardStore.getState().reset();
+      expect(useBoardStore.getState().parents).toEqual({});
+      useBoardStore.getState().hydrate(persisted);
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].laneId).toBe("lane-2");
+      expect(state.laneOrder["lane-2"]).toEqual(["P-1"]);
+      expect(state.addParent({ summary: "新規" })).toBe("P-2");
+    });
+
+    it("不正なレーン構成のhydrateはエラーになり状態は変わらない", async () => {
+      const { selectPersisted } = await import("./boardStore");
+      const persisted = selectPersisted(useBoardStore.getState());
+      const broken = {
+        ...persisted,
+        settings: { projectName: "x", lanes: [] },
+      };
+      expect(() => useBoardStore.getState().hydrate(broken)).toThrow(/レーン/);
+    });
+  });
+
   describe("exportMarkdown", () => {
     it("現在のボードをマークダウンとして出力する（レーン順・レーン名表記）", () => {
       const store = useBoardStore.getState();
