@@ -65,7 +65,11 @@ export function SettingsDialog({
 
   return (
     <div className="modal-backdrop">
-      <div role="dialog" aria-label="設定" className="item-detail">
+      <div
+        role="dialog"
+        aria-label="設定"
+        className="item-detail settings-dialog"
+      >
         <div className="item-detail-body">
           <label>
             プロジェクト名

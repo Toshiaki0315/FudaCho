@@ -260,6 +260,11 @@ body {
   animation: pop-in 0.15s ease;
 }
 
+/* レーン行のボタン群が収まるよう、設定ダイアログは広めにする */
+.item-detail.settings-dialog {
+  width: min(680px, 90vw);
+}
+
 /* フィールド部分のみスクロールし、ヘッダーとボタン行は常に表示する */
 .item-detail-body {
   overflow-y: auto;
