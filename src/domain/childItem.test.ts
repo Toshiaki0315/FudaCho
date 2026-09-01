@@ -28,6 +28,7 @@ describe("createChildItem", () => {
     expect(item.startDate).toBe("");
     expect(item.endDate).toBe("");
     expect(item.comments).toEqual([]);
+    expect(item.labels).toEqual([]);
   });
 
   it("全フィールドを指定して作成できる", () => {
@@ -42,6 +43,7 @@ describe("createChildItem", () => {
       startDate: "2026-09-01",
       endDate: "2026-09-02",
       comments: ["最初のコメント"],
+      labels: ["フロント"],
     });
     expect(item.assignee).toBe("野村");
     expect(item.estimatedHours).toBe(4);
@@ -50,6 +52,19 @@ describe("createChildItem", () => {
     expect(item.startDate).toBe("2026-09-01");
     expect(item.endDate).toBe("2026-09-02");
     expect(item.comments).toEqual(["最初のコメント"]);
+    expect(item.labels).toEqual(["フロント"]);
+  });
+
+  it("不正なラベル（区切り文字入り）はエラーになる", () => {
+    expect(() =>
+      createChildItem({
+        id: "C-1",
+        parentId: "P-1",
+        description: "作業",
+        laneId: "lane-1",
+        labels: ["a,b"],
+      }),
+    ).toThrow(/ラベル/);
   });
 
   it("IDが空文字の場合はエラーになる", () => {

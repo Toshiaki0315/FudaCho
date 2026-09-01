@@ -24,6 +24,7 @@ function renderDetail(
   return render(
     <ChildItemDetail
       item={buildItem()}
+      parentLabels={[]}
       laneName="作業中"
       onSave={vi.fn()}
       onClose={vi.fn()}
@@ -88,6 +89,7 @@ describe("ChildItemDetail", () => {
       startDate: "2026-09-03",
       endDate: "2026-09-04",
       comments: [],
+      labels: [],
     });
   });
 
@@ -145,6 +147,42 @@ describe("ChildItemDetail", () => {
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ comments: ["レビュー済み"] }),
+    );
+  });
+
+  it("親から引き継いだラベルが読み取り専用で表示される", () => {
+    renderDetail({ parentLabels: ["設計", "急ぎ"] });
+    const inherited = screen.getByRole("list", {
+      name: "親から引き継いだラベル",
+    });
+    const rows = within(inherited).getAllByRole("listitem");
+    expect(rows.map((r) => r.textContent)).toEqual(["設計", "急ぎ"]);
+    // 引き継ぎラベルには削除ボタンがない
+    expect(within(inherited).queryByRole("button")).toBeNull();
+  });
+
+  it("空のラベルは追加できない", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+    await user.click(screen.getByRole("button", { name: "ラベルを追加" }));
+    expect(screen.queryByRole("list", { name: "ラベル" })).toBeNull();
+  });
+
+  it("独自ラベルを追加・削除して保存できる", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDetail({ onSave });
+    const input = screen.getByLabelText("新しいラベル");
+    await user.type(input, "フロント");
+    await user.click(screen.getByRole("button", { name: "ラベルを追加" }));
+    await user.type(input, "一時的");
+    await user.click(screen.getByRole("button", { name: "ラベルを追加" }));
+    await user.click(
+      screen.getByRole("button", { name: "ラベル「一時的」を削除" }),
+    );
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ labels: ["フロント"] }),
     );
   });
 

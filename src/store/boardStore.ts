@@ -95,14 +95,24 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   hydrate(persisted) {
     validateLanes(persisted.settings.lanes);
-    // コメント導入前に保存されたデータとの互換: comments を補完する
+    // 機能追加前に保存されたデータとの互換: comments / labels を補完する
+    const parents = Object.fromEntries(
+      Object.entries(persisted.parents).map(([id, parent]) => [
+        id,
+        { ...parent, labels: parent.labels ?? [] },
+      ]),
+    );
     const children = Object.fromEntries(
       Object.entries(persisted.children).map(([id, child]) => [
         id,
-        { ...child, comments: child.comments ?? [] },
+        {
+          ...child,
+          comments: child.comments ?? [],
+          labels: child.labels ?? [],
+        },
       ]),
     );
-    set(selectPersisted({ ...persisted, children }));
+    set(selectPersisted({ ...persisted, parents, children }));
   },
 
   addParent(input) {

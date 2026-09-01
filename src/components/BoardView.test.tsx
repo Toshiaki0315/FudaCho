@@ -235,6 +235,71 @@ describe("BoardView", () => {
     expect(within(todoLane).getByText("C-1")).toBeInTheDocument();
   });
 
+  describe("ラベルと絞り込み", () => {
+    function seedLabeledBoard() {
+      const store = useBoardStore.getState();
+      const p1 = store.addParent({ summary: "設計タスク", labels: ["設計"] });
+      useBoardStore
+        .getState()
+        .addChild({ parentId: p1, description: "図を描く" });
+      useBoardStore.getState().addParent({ summary: "別のタスク" });
+      useBoardStore.getState().addChild({
+        parentId: "P-2",
+        description: "独自ラベル作業",
+        labels: ["フロント"],
+      });
+    }
+
+    it("カードにラベルが表示され、子は親のラベルを引き継いで表示する", () => {
+      seedLabeledBoard();
+      render(<BoardView />);
+      const todoLane = screen.getByRole("region", { name: "未着手" });
+      // 親カードのラベル + 子カードに引き継がれたラベル
+      expect(
+        within(todoLane).getAllByRole("button", { name: "設計" }),
+      ).toHaveLength(2);
+      expect(
+        within(todoLane).getByRole("button", { name: "フロント" }),
+      ).toBeInTheDocument();
+    });
+
+    it("ラベルをクリックすると絞り込まれ、絞り込みバーが表示される", async () => {
+      const user = userEvent.setup();
+      seedLabeledBoard();
+      render(<BoardView />);
+      await user.click(screen.getAllByRole("button", { name: "設計" })[0]);
+      expect(
+        screen.getByText(/ラベル「設計」で絞り込み中/),
+      ).toBeInTheDocument();
+      // 設計ラベルを持つ親とその子だけが表示される
+      expect(screen.getByText("設計タスク")).toBeInTheDocument();
+      expect(screen.getByText("図を描く")).toBeInTheDocument();
+      expect(screen.queryByText("別のタスク")).not.toBeInTheDocument();
+      expect(screen.queryByText("独自ラベル作業")).not.toBeInTheDocument();
+    });
+
+    it("子の独自ラベルでも絞り込める（親は対象外）", async () => {
+      const user = userEvent.setup();
+      seedLabeledBoard();
+      render(<BoardView />);
+      await user.click(screen.getByRole("button", { name: "フロント" }));
+      expect(screen.getByText("独自ラベル作業")).toBeInTheDocument();
+      expect(screen.queryByText("別のタスク")).not.toBeInTheDocument();
+      expect(screen.queryByText("設計タスク")).not.toBeInTheDocument();
+    });
+
+    it("「解除」で絞り込みが解除され全アイテムが表示される", async () => {
+      const user = userEvent.setup();
+      seedLabeledBoard();
+      render(<BoardView />);
+      await user.click(screen.getAllByRole("button", { name: "設計" })[0]);
+      await user.click(screen.getByRole("button", { name: "解除" }));
+      expect(screen.queryByText(/絞り込み中/)).not.toBeInTheDocument();
+      expect(screen.getByText("別のタスク")).toBeInTheDocument();
+      expect(screen.getByText("独自ラベル作業")).toBeInTheDocument();
+    });
+  });
+
   it("カードはドラッグ可能である（ドラッグ属性を持つ）", () => {
     useBoardStore.getState().addParent({ summary: "設計する" });
     render(<BoardView />);

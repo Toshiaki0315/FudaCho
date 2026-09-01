@@ -31,6 +31,26 @@ export function ParentItemDetail({
   );
   const [plannedEndDate, setPlannedEndDate] = useState(item.plannedEndDate);
   const [notes, setNotes] = useState(item.notes);
+  const [labels, setLabels] = useState(item.labels);
+  const [newLabel, setNewLabel] = useState("");
+
+  const addLabel = () => {
+    const trimmed = newLabel.trim();
+    if (
+      trimmed === "" ||
+      /[;,()（）]/.test(trimmed) ||
+      labels.includes(trimmed)
+    ) {
+      return;
+    }
+    setLabels([...labels, trimmed]);
+    setNewLabel("");
+  };
+
+  const removeLabel = (label: string) => {
+    setLabels(labels.filter((l) => l !== label));
+  };
+
   const [comments, setComments] = useState(item.comments);
   const [newComment, setNewComment] = useState("");
 
@@ -59,6 +79,7 @@ export function ParentItemDetail({
       plannedEndDate,
       notes,
       comments,
+      labels,
     });
   };
 
@@ -142,6 +163,35 @@ export function ParentItemDetail({
               onChange={(e) => setNotes(e.target.value)}
             />
           </label>
+          <section className="labels-section">
+            <p className="comments-title">ラベル</p>
+            {labels.length > 0 && (
+              <ul className="labels-list" aria-label="ラベル">
+                {labels.map((label) => (
+                  <li key={label} className="label-chip-editable">
+                    {label}
+                    <button
+                      type="button"
+                      aria-label={`ラベル「${label}」を削除`}
+                      onClick={() => removeLabel(label)}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="label-add-row">
+              <input
+                aria-label="新しいラベル"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+              />
+              <button type="button" onClick={addLabel}>
+                ラベルを追加
+              </button>
+            </div>
+          </section>
           <section className="comments-section">
             <p className="comments-title">コメント</p>
             {comments.length > 0 && (

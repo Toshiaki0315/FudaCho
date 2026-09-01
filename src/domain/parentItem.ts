@@ -1,3 +1,5 @@
+import { validateLabels } from "./labels";
+
 export const INFINITY_SIZE = "♾️" as const;
 
 export const FIBONACCI_SIZES = [
@@ -27,6 +29,7 @@ export interface ParentItem {
   plannedEndDate: string;
   notes: string;
   comments: string[];
+  labels: string[];
   childIds: string[];
 }
 
@@ -45,6 +48,7 @@ export interface CreateParentItemInput {
   plannedEndDate?: string;
   notes?: string;
   comments?: string[];
+  labels?: string[];
   childIds?: string[];
 }
 
@@ -56,6 +60,8 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
     throw new Error("レーンIDは必須です");
   }
   const size = input.size ?? DEFAULT_SIZE;
+  const labels = input.labels ?? [];
+  validateLabels(labels);
   if (!isValidSize(size)) {
     throw new Error(
       `サイズはフィボナッチ数列 (${FIBONACCI_SIZES.join(", ")}) のみ指定できます`,
@@ -72,6 +78,7 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
     plannedEndDate: input.plannedEndDate ?? "",
     notes: input.notes ?? "",
     comments: input.comments ?? [],
+    labels,
     childIds: input.childIds ?? [],
   };
 }

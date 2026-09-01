@@ -164,6 +164,48 @@ describe("generateMarkdown", () => {
     expect(md).toContain("- [ ] C-2: レビュー");
   });
 
+  it("ラベルをセミコロン区切りで出力し、読み戻せる（ラウンドトリップ）", () => {
+    const parent = createParentItem({
+      id: "P-1",
+      summary: "設計",
+      laneId: "lane-1",
+      labels: ["設計", "急ぎ"],
+      childIds: ["C-1"],
+    });
+    const children = [
+      createChildItem({
+        id: "C-1",
+        parentId: "P-1",
+        description: "図を描く",
+        laneId: "lane-1",
+        assignee: "野村",
+        labels: ["フロント"],
+      }),
+    ];
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [parent], children },
+      lanes,
+    );
+    expect(md).toContain("- ラベル: 設計;急ぎ");
+    expect(md).toContain("- [ ] C-1: 図を描く (担当: 野村, ラベル: フロント)");
+    const snapshot = parseMarkdown(md, lanes);
+    expect(snapshot.parents[0].labels).toEqual(["設計", "急ぎ"]);
+    expect(snapshot.children[0].labels).toEqual(["フロント"]);
+  });
+
+  it("ラベルのないアイテムはラベル行を出力しない", () => {
+    const parent = createParentItem({
+      id: "P-1",
+      summary: "設計",
+      laneId: "lane-1",
+    });
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [parent], children: [] },
+      lanes,
+    );
+    expect(md).not.toContain("- ラベル:");
+  });
+
   it("子アイテムのコメントを字下げリストとして出力し、読み戻せる", () => {
     const parent = createParentItem({
       id: "P-1",

@@ -167,6 +167,36 @@ describe("ParentItemDetail", () => {
     );
   });
 
+  it("ラベルを追加・削除して保存できる（不正・重複ラベルは追加されない）", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDetail({ onSave });
+    const input = screen.getByLabelText("新しいラベル");
+    const addButton = screen.getByRole("button", { name: "ラベルを追加" });
+    await user.type(input, "設計");
+    await user.click(addButton);
+    expect(input).toHaveValue("");
+    // 重複は追加されない
+    await user.type(input, "設計");
+    await user.click(addButton);
+    // 区切り文字入りは追加されない
+    await user.clear(input);
+    await user.type(input, "a;b");
+    await user.click(addButton);
+    const list = screen.getByRole("list", { name: "ラベル" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+    await user.clear(input);
+    await user.type(input, "急ぎ");
+    await user.click(addButton);
+    await user.click(
+      screen.getByRole("button", { name: "ラベル「設計」を削除" }),
+    );
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ labels: ["急ぎ"] }),
+    );
+  });
+
   it("キャンセルするとonCloseが呼ばれ、onSaveは呼ばれない", async () => {
     const onSave = vi.fn();
     const onClose = vi.fn();

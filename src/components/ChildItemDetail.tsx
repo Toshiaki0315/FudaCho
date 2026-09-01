@@ -4,6 +4,8 @@ import type { ChildItemPatch } from "../store/boardStore";
 
 interface ChildItemDetailProps {
   item: ChildItem;
+  /** 親から引き継ぐラベル（読み取り専用で表示する） */
+  parentLabels: string[];
   /** 現在所属するレーンの表示名（読み取り専用。移動はD&Dで行う） */
   laneName: string;
   onSave: (patch: ChildItemPatch) => void;
@@ -12,6 +14,7 @@ interface ChildItemDetailProps {
 
 export function ChildItemDetail({
   item,
+  parentLabels,
   laneName,
   onSave,
   onClose,
@@ -26,6 +29,26 @@ export function ChildItemDetail({
   );
   const [startDate, setStartDate] = useState(item.startDate);
   const [endDate, setEndDate] = useState(item.endDate);
+  const [labels, setLabels] = useState(item.labels);
+  const [newLabel, setNewLabel] = useState("");
+
+  const addLabel = () => {
+    const trimmed = newLabel.trim();
+    if (
+      trimmed === "" ||
+      /[;,()（）]/.test(trimmed) ||
+      labels.includes(trimmed)
+    ) {
+      return;
+    }
+    setLabels([...labels, trimmed]);
+    setNewLabel("");
+  };
+
+  const removeLabel = (label: string) => {
+    setLabels(labels.filter((l) => l !== label));
+  };
+
   const [comments, setComments] = useState(item.comments);
   const [newComment, setNewComment] = useState("");
 
@@ -47,6 +70,7 @@ export function ChildItemDetail({
       startDate,
       endDate,
       comments,
+      labels,
     });
   };
 
@@ -112,6 +136,47 @@ export function ChildItemDetail({
               onChange={(e) => setEndDate(e.target.value)}
             />
           </label>
+          <section className="labels-section">
+            <p className="comments-title">ラベル</p>
+            {parentLabels.length > 0 && (
+              <ul
+                className="labels-list inherited"
+                aria-label="親から引き継いだラベル"
+              >
+                {parentLabels.map((label) => (
+                  <li key={label} className="label-chip-editable inherited">
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {labels.length > 0 && (
+              <ul className="labels-list" aria-label="ラベル">
+                {labels.map((label) => (
+                  <li key={label} className="label-chip-editable">
+                    {label}
+                    <button
+                      type="button"
+                      aria-label={`ラベル「${label}」を削除`}
+                      onClick={() => removeLabel(label)}
+                    >
+                      ✕
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="label-add-row">
+              <input
+                aria-label="新しいラベル"
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+              />
+              <button type="button" onClick={addLabel}>
+                ラベルを追加
+              </button>
+            </div>
+          </section>
           <section className="comments-section">
             <p className="comments-title">コメント</p>
             {comments.length > 0 && (

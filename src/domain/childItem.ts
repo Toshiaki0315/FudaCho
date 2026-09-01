@@ -1,3 +1,5 @@
+import { validateLabels } from "./labels";
+
 export interface ChildItem {
   id: string;
   parentId: string;
@@ -9,6 +11,8 @@ export interface ChildItem {
   startDate: string;
   endDate: string;
   comments: string[];
+  /** 独自ラベル。表示上の実効ラベルは親のラベルと合成して求める */
+  labels: string[];
 }
 
 export interface CreateChildItemInput {
@@ -22,6 +26,7 @@ export interface CreateChildItemInput {
   startDate?: string;
   endDate?: string;
   comments?: string[];
+  labels?: string[];
 }
 
 export function createChildItem(input: CreateChildItemInput): ChildItem {
@@ -38,6 +43,8 @@ export function createChildItem(input: CreateChildItemInput): ChildItem {
   if (estimatedHours !== null && estimatedHours < 0) {
     throw new Error("見積時間は0以上を指定してください");
   }
+  const labels = input.labels ?? [];
+  validateLabels(labels);
   const actualHours = input.actualHours ?? null;
   if (actualHours !== null && actualHours < 0) {
     throw new Error("実績時間は0以上を指定してください");
@@ -53,5 +60,6 @@ export function createChildItem(input: CreateChildItemInput): ChildItem {
     startDate: input.startDate ?? "",
     endDate: input.endDate ?? "",
     comments: input.comments ?? [],
+    labels,
   };
 }

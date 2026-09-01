@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/sortable";
 import { useEffect, useState, type ReactNode } from "react";
 import { canAcceptMore, findDropLane, type Lane } from "../domain/lane";
+import { mergeLabels } from "../domain/labels";
 import { useBoardStore } from "../store/boardStore";
 import { ChildItemCard } from "./ChildItemCard";
 import { ChildItemDetail } from "./ChildItemDetail";
@@ -57,6 +58,8 @@ export function BoardView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // ドラッグ中のアイテムID。DragOverlayに複製カードを表示するために保持する
   const [activeId, setActiveId] = useState<string | null>(null);
+  // ラベル絞り込み（カードのラベルチップをクリックで設定）
+  const [labelFilter, setLabelFilter] = useState<string | null>(null);
 
   // 通知は数秒後に自動で消える
   useEffect(() => {
@@ -78,6 +81,23 @@ export function BoardView() {
   const canDrop =
     dropLane !== null && canAcceptMore(dropLane, laneCounts[dropLane.id]);
 
+  // 子アイテムの実効ラベル = 親のラベル + 独自ラベル（親の変更が自動で引き継がれる）
+  const effectiveLabelsOf = (childId: string) => {
+    const child = children[childId];
+    return mergeLabels(parents[child.parentId].labels, child.labels);
+  };
+
+  const matchesFilter = (itemId: string) => {
+    if (labelFilter === null) {
+      return true;
+    }
+    const parent = parents[itemId];
+    if (parent) {
+      return parent.labels.includes(labelFilter);
+    }
+    return effectiveLabelsOf(itemId).includes(labelFilter);
+  };
+
   const renderCard = (itemId: string, lane: Lane) => {
     const parent = parents[itemId];
     const card = parent ? (
@@ -85,9 +105,14 @@ export function BoardView() {
         item={parent}
         children_={parent.childIds.map((childId) => children[childId])}
         lanes={settings.lanes}
+        onLabelClick={setLabelFilter}
       />
     ) : (
-      <ChildItemCard item={children[itemId]} />
+      <ChildItemCard
+        item={children[itemId]}
+        labels={effectiveLabelsOf(itemId)}
+        onLabelClick={setLabelFilter}
+      />
     );
     return (
       <div onDoubleClick={() => setSelectedId(itemId)}>
@@ -108,13 +133,14 @@ export function BoardView() {
 
   const laneContent = (laneId: string) => {
     const lane = settings.lanes.find((l) => l.id === laneId)!;
+    const visibleIds = laneOrder[laneId].filter(matchesFilter);
     return (
       <SortableContext
-        items={laneOrder[laneId]}
+        items={visibleIds}
         strategy={verticalListSortingStrategy}
       >
         <LaneDropArea laneId={laneId}>
-          {laneOrder[laneId].map((itemId) => (
+          {visibleIds.map((itemId) => (
             <SortableCard key={itemId} id={itemId}>
               {renderCard(itemId, lane)}
             </SortableCard>
@@ -154,6 +180,14 @@ export function BoardView() {
         applyDragEnd(event);
       }}
     >
+      {labelFilter !== null && (
+        <div className="label-filter-bar">
+          <span>ラベル「{labelFilter}」で絞り込み中</span>
+          <button type="button" onClick={() => setLabelFilter(null)}>
+            解除
+          </button>
+        </div>
+      )}
       <KanbanBoard
         lanes={settings.lanes}
         laneContent={laneContent}
@@ -194,6 +228,7 @@ export function BoardView() {
       {selectedChild && (
         <ChildItemDetail
           item={selectedChild}
+          parentLabels={parents[selectedChild.parentId].labels}
           laneName={laneNameOf(selectedChild.laneId)}
           onSave={(patch) => {
             updateChild(selectedChild.id, patch);

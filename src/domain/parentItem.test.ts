@@ -50,6 +50,7 @@ describe("createParentItem", () => {
     expect(item.plannedEndDate).toBe("");
     expect(item.notes).toBe("");
     expect(item.comments).toEqual([]);
+    expect(item.labels).toEqual([]);
     expect(item.childIds).toEqual([]);
   });
 
@@ -65,6 +66,7 @@ describe("createParentItem", () => {
       plannedEndDate: "2026-09-30",
       notes: "備考メモ",
       comments: ["最初のコメント"],
+      labels: ["設計", "急ぎ"],
       childIds: ["C-1", "C-2"],
     });
     expect(item.size).toBe(8);
@@ -75,7 +77,19 @@ describe("createParentItem", () => {
     expect(item.plannedEndDate).toBe("2026-09-30");
     expect(item.notes).toBe("備考メモ");
     expect(item.comments).toEqual(["最初のコメント"]);
+    expect(item.labels).toEqual(["設計", "急ぎ"]);
     expect(item.childIds).toEqual(["C-1", "C-2"]);
+  });
+
+  it("不正なラベル（区切り文字入り）はエラーになる", () => {
+    expect(() =>
+      createParentItem({
+        id: "P-1",
+        summary: "設計",
+        laneId: "lane-1",
+        labels: ["a;b"],
+      }),
+    ).toThrow(/ラベル/);
   });
 
   it("サイズに♾️を指定できる", () => {

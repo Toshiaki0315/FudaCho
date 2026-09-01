@@ -105,6 +105,9 @@ function childLine(child: ChildItem, lanes: readonly Lane[]): string {
   if (child.assignee !== "") {
     meta.push(`担当: ${child.assignee}`);
   }
+  if (child.labels.length > 0) {
+    meta.push(`ラベル: ${child.labels.join(";")}`);
+  }
   if (child.estimatedHours !== null) {
     meta.push(`見積: ${child.estimatedHours}h`);
   }
@@ -148,6 +151,9 @@ export function generateMarkdown(
     }
     if (parent.notes !== "") {
       lines.push(`- 備考: ${parent.notes}`);
+    }
+    if (parent.labels.length > 0) {
+      lines.push(`- ラベル: ${parent.labels.join(";")}`);
     }
     if (parent.comments.length > 0) {
       lines.push("- コメント:");
@@ -209,6 +215,8 @@ function parseChildLine(
         laneId = laneByName(lanes, value).id;
       } else if (key === "担当") {
         input.assignee = value;
+      } else if (key === "ラベル") {
+        input.labels = value.split(";");
       } else if (key === "見積") {
         input.estimatedHours = Number(value.replace(/h$/, ""));
       } else if (key === "実績") {
@@ -341,6 +349,8 @@ export function parseMarkdown(
         parent.input.plannedStartDate = value;
       } else if (key === "備考") {
         parent.input.notes = value;
+      } else if (key === "ラベル") {
+        parent.input.labels = value.split(";");
       } else if (key === "コメント") {
         parent.inComments = true;
       } else {
