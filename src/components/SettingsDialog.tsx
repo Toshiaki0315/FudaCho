@@ -127,7 +127,7 @@ export function SettingsDialog({
               </li>
             ))}
           </ul>
-          <button type="button" onClick={addLane}>
+          <button type="button" className="add-lane-button" onClick={addLane}>
             ＋レーンを追加
           </button>
           {error !== null && <p className="import-error">{error}</p>}
