@@ -52,7 +52,8 @@ export function ChildItemDetail({
         </header>
         <label>
           作業内容
-          <input
+          <textarea
+            rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />

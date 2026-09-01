@@ -46,6 +46,13 @@ describe("ChildItemDetail", () => {
     expect(screen.getByLabelText("終了日")).toHaveValue("2026-09-02");
   });
 
+  it("作業内容は複数行が見える大きめのテキストエリアである", () => {
+    renderDetail();
+    const description = screen.getByLabelText("作業内容");
+    expect(description.tagName).toBe("TEXTAREA");
+    expect(description).toHaveAttribute("rows", "4");
+  });
+
   it("所属レーン名は読み取り専用で表示される（移動はD&Dで行う）", () => {
     renderDetail();
     expect(screen.getByText("作業中")).toBeInTheDocument();
