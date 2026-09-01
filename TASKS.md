@@ -60,4 +60,4 @@
 - [x] 7.1 全体のテストカバレッジが90%以上であることを確認（Statements/Branches/Functions/Lines すべて100%、テスト195件）
 - [x] 7.2 UI/UXの微調整（デザイン、アニメーション）
 - [x] 7.3 設定画面の実装（レーンの増減、名前変更、プロジェクト名変更）
-- [ ] 7.4 最終動作確認（Apple Silicon Mac上でのネイティブ動作確認）とGitHubへのPush
+- [x] 7.4 最終動作確認（Apple Silicon Mac上でのネイティブ動作確認）とGitHubへのPush（arm64ビルド成功・.app/.dmg生成・起動確認済み）
