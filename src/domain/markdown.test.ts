@@ -164,6 +164,46 @@ describe("generateMarkdown", () => {
     expect(md).toContain("- [ ] C-2: レビュー");
   });
 
+  it("子アイテムのコメントを字下げリストとして出力し、読み戻せる", () => {
+    const parent = createParentItem({
+      id: "P-1",
+      summary: "設計",
+      laneId: "lane-1",
+      comments: ["親のコメント"],
+      childIds: ["C-1", "C-2"],
+    });
+    const children = [
+      createChildItem({
+        id: "C-1",
+        parentId: "P-1",
+        description: "図を描く",
+        laneId: "lane-1",
+        comments: ["子のコメント1", "子のコメント2"],
+      }),
+      createChildItem({
+        id: "C-2",
+        parentId: "P-1",
+        description: "レビュー",
+        laneId: "lane-1",
+      }),
+    ];
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [parent], children },
+      lanes,
+    );
+    expect(md).toContain(
+      "- [ ] C-1: 図を描く\n  - 子のコメント1\n  - 子のコメント2",
+    );
+    const snapshot = parseMarkdown(md, lanes);
+    // 親と子のコメントが混ざらない
+    expect(snapshot.parents[0].comments).toEqual(["親のコメント"]);
+    expect(snapshot.children[0].comments).toEqual([
+      "子のコメント1",
+      "子のコメント2",
+    ]);
+    expect(snapshot.children[1].comments).toEqual([]);
+  });
+
   it("存在しないレーンのアイテムはエラーになる", () => {
     const parent = createParentItem({
       id: "P-1",

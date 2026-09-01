@@ -95,7 +95,14 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   hydrate(persisted) {
     validateLanes(persisted.settings.lanes);
-    set(selectPersisted(persisted));
+    // コメント導入前に保存されたデータとの互換: comments を補完する
+    const children = Object.fromEntries(
+      Object.entries(persisted.children).map(([id, child]) => [
+        id,
+        { ...child, comments: child.comments ?? [] },
+      ]),
+    );
+    set(selectPersisted({ ...persisted, children }));
   },
 
   addParent(input) {

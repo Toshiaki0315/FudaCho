@@ -27,6 +27,7 @@ describe("createChildItem", () => {
     expect(item.actualHours).toBeNull();
     expect(item.startDate).toBe("");
     expect(item.endDate).toBe("");
+    expect(item.comments).toEqual([]);
   });
 
   it("全フィールドを指定して作成できる", () => {
@@ -40,6 +41,7 @@ describe("createChildItem", () => {
       actualHours: 5.5,
       startDate: "2026-09-01",
       endDate: "2026-09-02",
+      comments: ["最初のコメント"],
     });
     expect(item.assignee).toBe("野村");
     expect(item.estimatedHours).toBe(4);
@@ -47,6 +49,7 @@ describe("createChildItem", () => {
     expect(item.laneId).toBe("lane-3");
     expect(item.startDate).toBe("2026-09-01");
     expect(item.endDate).toBe("2026-09-02");
+    expect(item.comments).toEqual(["最初のコメント"]);
   });
 
   it("IDが空文字の場合はエラーになる", () => {

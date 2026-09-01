@@ -26,6 +26,17 @@ export function ChildItemDetail({
   );
   const [startDate, setStartDate] = useState(item.startDate);
   const [endDate, setEndDate] = useState(item.endDate);
+  const [comments, setComments] = useState(item.comments);
+  const [newComment, setNewComment] = useState("");
+
+  const addComment = () => {
+    const trimmed = newComment.trim();
+    if (trimmed === "") {
+      return;
+    }
+    setComments([...comments, trimmed]);
+    setNewComment("");
+  };
 
   const handleSave = () => {
     onSave({
@@ -35,6 +46,7 @@ export function ChildItemDetail({
       actualHours: actualHours === "" ? null : Number(actualHours),
       startDate,
       endDate,
+      comments,
     });
   };
 
@@ -100,6 +112,30 @@ export function ChildItemDetail({
               onChange={(e) => setEndDate(e.target.value)}
             />
           </label>
+          <section className="comments-section">
+            <p className="comments-title">コメント</p>
+            {comments.length > 0 && (
+              <ul className="comments-list" aria-label="コメント">
+                {comments.map((comment, index) => (
+                  <li key={index}>{comment}</li>
+                ))}
+              </ul>
+            )}
+            <label>
+              新しいコメント
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="add-comment-button"
+              onClick={addComment}
+            >
+              コメントを追加
+            </button>
+          </section>
         </div>
         <footer className="item-detail-footer">
           <button type="button" onClick={onClose}>

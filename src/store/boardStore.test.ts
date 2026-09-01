@@ -460,6 +460,27 @@ describe("boardStore", () => {
       expect(state.addParent({ summary: "新規" })).toBe("P-2");
     });
 
+    it("コメント導入前の保存データもhydrateで安全に読み込める（comments補完）", async () => {
+      const { selectPersisted } = await import("./boardStore");
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業" });
+      const persisted = selectPersisted(useBoardStore.getState());
+      const legacyChild = { ...persisted.children["C-1"] } as Record<
+        string,
+        unknown
+      >;
+      delete legacyChild.comments;
+      const legacy = {
+        ...persisted,
+        children: { "C-1": legacyChild },
+      } as unknown as typeof persisted;
+      useBoardStore.getState().reset();
+      useBoardStore.getState().hydrate(legacy);
+      expect(useBoardStore.getState().children["C-1"].comments).toEqual([]);
+    });
+
     it("不正なレーン構成のhydrateはエラーになり状態は変わらない", async () => {
       const { selectPersisted } = await import("./boardStore");
       const persisted = selectPersisted(useBoardStore.getState());

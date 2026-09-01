@@ -8,6 +8,7 @@ export interface ChildItem {
   laneId: string;
   startDate: string;
   endDate: string;
+  comments: string[];
 }
 
 export interface CreateChildItemInput {
@@ -20,6 +21,7 @@ export interface CreateChildItemInput {
   actualHours?: number | null;
   startDate?: string;
   endDate?: string;
+  comments?: string[];
 }
 
 export function createChildItem(input: CreateChildItemInput): ChildItem {
@@ -50,5 +52,6 @@ export function createChildItem(input: CreateChildItemInput): ChildItem {
     laneId: input.laneId,
     startDate: input.startDate ?? "",
     endDate: input.endDate ?? "",
+    comments: input.comments ?? [],
   };
 }

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { createChildItem } from "../domain/childItem";
@@ -87,6 +87,7 @@ describe("ChildItemDetail", () => {
       actualHours: 3.5,
       startDate: "2026-09-03",
       endDate: "2026-09-04",
+      comments: [],
     });
   });
 
@@ -112,6 +113,39 @@ describe("ChildItemDetail", () => {
     renderDetail({ item });
     expect(screen.getByLabelText("見積時間")).toHaveValue(null);
     expect(screen.getByLabelText("実績時間")).toHaveValue(null);
+  });
+
+  it("既存のコメントが一覧表示される", () => {
+    const item = createChildItem({
+      id: "C-1",
+      parentId: "P-1",
+      description: "作業",
+      laneId: "lane-1",
+      comments: ["一つ目", "二つ目"],
+    });
+    renderDetail({ item });
+    const list = screen.getByRole("list", { name: "コメント" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("一つ目");
+    expect(rows[1]).toHaveTextContent("二つ目");
+  });
+
+  it("コメントを追加して保存すると全件渡され、空コメントは追加できない", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDetail({ onSave });
+    // 空のまま追加しても何も起きない
+    await user.click(screen.getByRole("button", { name: "コメントを追加" }));
+    expect(screen.queryByRole("list", { name: "コメント" })).toBeNull();
+    const input = screen.getByLabelText("新しいコメント");
+    await user.type(input, "レビュー済み");
+    await user.click(screen.getByRole("button", { name: "コメントを追加" }));
+    expect(input).toHaveValue("");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ comments: ["レビュー済み"] }),
+    );
   });
 
   it("キャンセルするとonCloseが呼ばれ、onSaveは呼ばれない", async () => {

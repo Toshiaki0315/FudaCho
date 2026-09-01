@@ -160,6 +160,9 @@ export function generateMarkdown(
       lines.push("", "### 子アイテム");
       for (const child of children) {
         lines.push(childLine(child, lanes));
+        for (const comment of child.comments) {
+          lines.push(`  - ${comment}`);
+        }
       }
     }
   }
@@ -234,6 +237,7 @@ export function parseMarkdown(
   const lines = markdown.split("\n");
   let projectName: string | null = null;
   let parsedLanes: Lane[] | null = null;
+  let lastChildIndex: number | null = null;
   let inLaneSection = false;
   const parsingParents: ParsingParent[] = [];
   const children: ChildItem[] = [];
@@ -259,6 +263,7 @@ export function parseMarkdown(
     const h2 = line.match(/^## (\S+): (.+)$/);
     if (h2) {
       inLaneSection = false;
+      lastChildIndex = null;
       parsingParents.push({
         input: {
           id: h2[1],
@@ -293,11 +298,22 @@ export function parseMarkdown(
       );
       children.push(createChildItem(input));
       parent.childIds.push(input.id);
+      // 以降の字下げリストはこの子アイテムのコメントとして扱う
+      parent.inComments = false;
+      lastChildIndex = children.length - 1;
       continue;
     }
     const commentMatch = line.match(/^ {2}- (.+)$/);
     if (commentMatch && parent.inComments) {
       parent.comments.push(commentMatch[1]);
+      continue;
+    }
+    if (commentMatch && lastChildIndex !== null) {
+      const child = children[lastChildIndex];
+      children[lastChildIndex] = {
+        ...child,
+        comments: [...child.comments, commentMatch[1]],
+      };
       continue;
     }
     const field = line.match(/^- ([^:]+):(?: (.*))?$/);
