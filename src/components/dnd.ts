@@ -1,3 +1,4 @@
+import type { DragEndEvent } from "@dnd-kit/core";
 import type { LaneOrder } from "../domain/laneOrder";
 import { ALL_STATUSES, type Status } from "../domain/settings";
 
@@ -22,6 +23,15 @@ function laneOf(order: LaneOrder, itemId: string): Status | null {
  * D&D終了時のドラッグ元とドロップ先から、ボードへ適用する操作を決定する。
  * ドロップ先はレーンID（ステータス）またはアイテムIDのいずれか。
  */
+/** dnd-kitのDragEndEventを、ID組での適用関数呼び出しへ変換するハンドラを作る。 */
+export function composeDragHandler(
+  apply: (activeId: string, overId: string | null) => void,
+): (event: DragEndEvent) => void {
+  return (event) => {
+    apply(String(event.active.id), event.over ? String(event.over.id) : null);
+  };
+}
+
 export function resolveDragEnd(
   order: LaneOrder,
   activeId: string,

@@ -1,26 +1,20 @@
-import { useState } from "react";
 import "./App.css";
+import { BoardView } from "./components/BoardView";
 import { Header } from "./components/Header";
-import { KanbanBoard } from "./components/KanbanBoard";
-import { createDefaultSettings } from "./domain/settings";
+import { useBoardStore } from "./store/boardStore";
 
 function App() {
-  const [settings] = useState(createDefaultSettings);
+  const projectName = useBoardStore((state) => state.settings.projectName);
 
   return (
     <main className="container">
       <Header
-        projectName={settings.projectName}
+        projectName={projectName}
         onOpenSettings={() => {
           // 設定画面はタスク7.3で実装する
         }}
       />
-      <KanbanBoard
-        lanes={settings.lanes}
-        onAddItem={() => {
-          // 新規作成ダイアログはフェーズ5で実装する
-        }}
-      />
+      <BoardView />
     </main>
   );
 }

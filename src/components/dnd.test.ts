@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { DragEndEvent } from "@dnd-kit/core";
 import { createEmptyLaneOrder, insertIntoLane } from "../domain/laneOrder";
-import { resolveDragEnd } from "./dnd";
+import { composeDragHandler, resolveDragEnd } from "./dnd";
 
 function buildOrder() {
   let order = createEmptyLaneOrder();
@@ -53,5 +54,24 @@ describe("resolveDragEnd", () => {
 
   it("ドロップ先がレーンにもアイテムにも該当しない場合はnullを返す", () => {
     expect(resolveDragEnd(buildOrder(), "P-1", "X-9")).toBeNull();
+  });
+});
+
+describe("composeDragHandler", () => {
+  it("DragEndEventからアクティブIDとドロップ先IDを取り出して適用関数に渡す", () => {
+    const apply = vi.fn();
+    const handler = composeDragHandler(apply);
+    handler({
+      active: { id: "P-1" },
+      over: { id: "InProgress" },
+    } as DragEndEvent);
+    expect(apply).toHaveBeenCalledWith("P-1", "InProgress");
+  });
+
+  it("ドロップ先がない場合はnullを渡す", () => {
+    const apply = vi.fn();
+    const handler = composeDragHandler(apply);
+    handler({ active: { id: "P-1" }, over: null } as DragEndEvent);
+    expect(apply).toHaveBeenCalledWith("P-1", null);
   });
 });
