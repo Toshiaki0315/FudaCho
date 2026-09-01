@@ -139,8 +139,12 @@ describe("SettingsDialog", () => {
   it("先頭の「上へ」と末尾の「下へ」は無効である", () => {
     renderDialog();
     const rows = screen.getAllByRole("listitem");
-    expect(within(rows[0]).getByRole("button", { name: "上へ" })).toBeDisabled();
-    expect(within(rows[4]).getByRole("button", { name: "下へ" })).toBeDisabled();
+    expect(
+      within(rows[0]).getByRole("button", { name: "上へ" }),
+    ).toBeDisabled();
+    expect(
+      within(rows[4]).getByRole("button", { name: "下へ" }),
+    ).toBeDisabled();
     expect(
       within(rows[2]).getByRole("button", { name: "上へ" }),
     ).not.toBeDisabled();
