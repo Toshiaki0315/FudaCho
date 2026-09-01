@@ -12,7 +12,8 @@ function buildItem() {
     laneId: "lane-2",
     assignee: "野村",
     reason: "リリースに必要",
-    schedule: "2026-09-30",
+    plannedStartDate: "2026-09-01",
+    plannedEndDate: "2026-09-30",
     notes: "備考メモ",
     comments: ["最初のコメント"],
   });
@@ -41,7 +42,8 @@ describe("ParentItemDetail", () => {
     expect(screen.getByLabelText("サイズ")).toHaveValue("5");
     expect(screen.getByLabelText("担当者")).toHaveValue("野村");
     expect(screen.getByLabelText("理由")).toHaveValue("リリースに必要");
-    expect(screen.getByLabelText("日程")).toHaveValue("2026-09-30");
+    expect(screen.getByLabelText("開始予定日")).toHaveValue("2026-09-01");
+    expect(screen.getByLabelText("終了予定日")).toHaveValue("2026-09-30");
     expect(screen.getByLabelText("備考")).toHaveValue("備考メモ");
     expect(screen.getByLabelText("コメント")).toHaveValue("最初のコメント");
   });
@@ -74,20 +76,22 @@ describe("ParentItemDetail", () => {
     );
   });
 
-  it("担当者・理由・日程・備考も編集して保存できる", async () => {
+  it("担当者・理由・開始/終了予定日・備考も編集して保存できる", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
     renderDetail({ onSave });
     await user.type(screen.getByLabelText("担当者"), "2");
     await user.type(screen.getByLabelText("理由"), "！");
-    await user.type(screen.getByLabelText("日程"), "頃");
+    await user.type(screen.getByLabelText("開始予定日"), "頃");
+    await user.type(screen.getByLabelText("終了予定日"), "頃");
     await user.type(screen.getByLabelText("備考"), "追記");
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({
         assignee: "野村2",
         reason: "リリースに必要！",
-        schedule: "2026-09-30頃",
+        plannedStartDate: "2026-09-01頃",
+        plannedEndDate: "2026-09-30頃",
         notes: "備考メモ追記",
       }),
     );

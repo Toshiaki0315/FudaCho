@@ -26,7 +26,10 @@ export function ParentItemDetail({
   const [size, setSize] = useState<Size>(item.size);
   const [assignee, setAssignee] = useState(item.assignee);
   const [reason, setReason] = useState(item.reason);
-  const [schedule, setSchedule] = useState(item.schedule);
+  const [plannedStartDate, setPlannedStartDate] = useState(
+    item.plannedStartDate,
+  );
+  const [plannedEndDate, setPlannedEndDate] = useState(item.plannedEndDate);
   const [notes, setNotes] = useState(item.notes);
   const [commentsText, setCommentsText] = useState(item.comments.join("\n"));
 
@@ -36,7 +39,8 @@ export function ParentItemDetail({
       size,
       assignee,
       reason,
-      schedule,
+      plannedStartDate,
+      plannedEndDate,
       notes,
       comments: commentsText
         .split("\n")
@@ -88,10 +92,17 @@ export function ParentItemDetail({
           <input value={reason} onChange={(e) => setReason(e.target.value)} />
         </label>
         <label>
-          日程
+          開始予定日
           <input
-            value={schedule}
-            onChange={(e) => setSchedule(e.target.value)}
+            value={plannedStartDate}
+            onChange={(e) => setPlannedStartDate(e.target.value)}
+          />
+        </label>
+        <label>
+          終了予定日
+          <input
+            value={plannedEndDate}
+            onChange={(e) => setPlannedEndDate(e.target.value)}
           />
         </label>
         <label>

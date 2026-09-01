@@ -140,8 +140,11 @@ export function generateMarkdown(
     if (parent.reason !== "") {
       lines.push(`- 理由: ${parent.reason}`);
     }
-    if (parent.schedule !== "") {
-      lines.push(`- 日程: ${parent.schedule}`);
+    if (parent.plannedStartDate !== "") {
+      lines.push(`- 開始予定日: ${parent.plannedStartDate}`);
+    }
+    if (parent.plannedEndDate !== "") {
+      lines.push(`- 終了予定日: ${parent.plannedEndDate}`);
     }
     if (parent.notes !== "") {
       lines.push(`- 備考: ${parent.notes}`);
@@ -313,8 +316,13 @@ export function parseMarkdown(
         parent.input.assignee = value;
       } else if (key === "理由") {
         parent.input.reason = value;
+      } else if (key === "開始予定日") {
+        parent.input.plannedStartDate = value;
+      } else if (key === "終了予定日") {
+        parent.input.plannedEndDate = value;
       } else if (key === "日程") {
-        parent.input.schedule = value;
+        // 旧形式（分割前）の互換読み込み: 日程は開始予定日として取り込む
+        parent.input.plannedStartDate = value;
       } else if (key === "備考") {
         parent.input.notes = value;
       } else if (key === "コメント") {

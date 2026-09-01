@@ -11,7 +11,8 @@ export interface ParentItem {
   laneId: string;
   assignee: string;
   reason: string;
-  schedule: string;
+  plannedStartDate: string;
+  plannedEndDate: string;
   notes: string;
   comments: string[];
   childIds: string[];
@@ -28,7 +29,8 @@ export interface CreateParentItemInput {
   size?: Size;
   assignee?: string;
   reason?: string;
-  schedule?: string;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
   notes?: string;
   comments?: string[];
   childIds?: string[];
@@ -54,7 +56,8 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
     laneId: input.laneId,
     assignee: input.assignee ?? "",
     reason: input.reason ?? "",
-    schedule: input.schedule ?? "",
+    plannedStartDate: input.plannedStartDate ?? "",
+    plannedEndDate: input.plannedEndDate ?? "",
     notes: input.notes ?? "",
     comments: input.comments ?? [],
     childIds: input.childIds ?? [],

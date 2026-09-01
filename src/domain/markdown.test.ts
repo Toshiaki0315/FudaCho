@@ -78,7 +78,8 @@ describe("generateMarkdown", () => {
       laneId: "lane-2",
       assignee: "野村",
       reason: "リリースに必要",
-      schedule: "2026-09-30",
+      plannedStartDate: "2026-09-01",
+      plannedEndDate: "2026-09-30",
       notes: "メモ",
       comments: ["最初のコメント", "二つ目"],
     });
@@ -91,7 +92,8 @@ describe("generateMarkdown", () => {
     expect(md).toContain("- サイズ: 5");
     expect(md).toContain("- 担当者: 野村");
     expect(md).toContain("- 理由: リリースに必要");
-    expect(md).toContain("- 日程: 2026-09-30");
+    expect(md).toContain("- 開始予定日: 2026-09-01");
+    expect(md).toContain("- 終了予定日: 2026-09-30");
     expect(md).toContain("- 備考: メモ");
     expect(md).toContain("- コメント:");
     expect(md).toContain("  - 最初のコメント");
@@ -196,7 +198,8 @@ describe("parseMarkdown", () => {
 - サイズ: 5
 - 担当者: 野村
 - 理由: リリースに必要
-- 日程: 2026-09-30
+- 開始予定日: 2026-09-01
+- 終了予定日: 2026-09-30
 - 備考: メモ
 - コメント:
   - 最初のコメント
@@ -224,10 +227,22 @@ describe("parseMarkdown", () => {
     expect(p1.size).toBe(5);
     expect(p1.assignee).toBe("野村");
     expect(p1.reason).toBe("リリースに必要");
-    expect(p1.schedule).toBe("2026-09-30");
+    expect(p1.plannedStartDate).toBe("2026-09-01");
+    expect(p1.plannedEndDate).toBe("2026-09-30");
     expect(p1.notes).toBe("メモ");
     expect(p1.comments).toEqual(["最初のコメント", "二つ目"]);
     expect(p1.childIds).toEqual(["C-1", "C-2"]);
+  });
+
+  it("旧形式の「日程」フィールドは開始予定日として読み込む（互換）", () => {
+    const md = `# P
+
+## P-1: 設計
+- 日程: 2026-09-30頃
+`;
+    const p1 = parseMarkdown(md, lanes).parents[0];
+    expect(p1.plannedStartDate).toBe("2026-09-30頃");
+    expect(p1.plannedEndDate).toBe("");
   });
 
   it("レーン省略時は新規投入先レーンになる", () => {

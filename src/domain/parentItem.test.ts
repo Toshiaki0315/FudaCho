@@ -46,7 +46,8 @@ describe("createParentItem", () => {
     expect(item.size).toBe(0);
     expect(item.assignee).toBe("");
     expect(item.reason).toBe("");
-    expect(item.schedule).toBe("");
+    expect(item.plannedStartDate).toBe("");
+    expect(item.plannedEndDate).toBe("");
     expect(item.notes).toBe("");
     expect(item.comments).toEqual([]);
     expect(item.childIds).toEqual([]);
@@ -60,7 +61,8 @@ describe("createParentItem", () => {
       size: 8,
       assignee: "野村",
       reason: "リリースに必要",
-      schedule: "2026-09-30",
+      plannedStartDate: "2026-09-01",
+      plannedEndDate: "2026-09-30",
       notes: "備考メモ",
       comments: ["最初のコメント"],
       childIds: ["C-1", "C-2"],
@@ -69,7 +71,8 @@ describe("createParentItem", () => {
     expect(item.laneId).toBe("lane-2");
     expect(item.assignee).toBe("野村");
     expect(item.reason).toBe("リリースに必要");
-    expect(item.schedule).toBe("2026-09-30");
+    expect(item.plannedStartDate).toBe("2026-09-01");
+    expect(item.plannedEndDate).toBe("2026-09-30");
     expect(item.notes).toBe("備考メモ");
     expect(item.comments).toEqual(["最初のコメント"]);
     expect(item.childIds).toEqual(["C-1", "C-2"]);

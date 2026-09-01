@@ -252,7 +252,8 @@ describe("boardStore", () => {
         size: 5,
         assignee: "野村",
         reason: "重要",
-        schedule: "2026-09-15",
+        plannedStartDate: "2026-09-10",
+        plannedEndDate: "2026-09-15",
         notes: "備考",
         comments: ["メモ"],
       });
@@ -261,7 +262,8 @@ describe("boardStore", () => {
       expect(parent.size).toBe(5);
       expect(parent.assignee).toBe("野村");
       expect(parent.reason).toBe("重要");
-      expect(parent.schedule).toBe("2026-09-15");
+      expect(parent.plannedStartDate).toBe("2026-09-10");
+      expect(parent.plannedEndDate).toBe("2026-09-15");
       expect(parent.notes).toBe("備考");
       expect(parent.comments).toEqual(["メモ"]);
     });
