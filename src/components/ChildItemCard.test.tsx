@@ -9,6 +9,7 @@ describe("ChildItemCard", () => {
       id: "C-1",
       parentId: "P-1",
       description: "テストを書く",
+      laneId: "lane-1",
     });
     render(<ChildItemCard item={item} />);
     expect(screen.getByText("C-1")).toBeInTheDocument();
@@ -20,6 +21,7 @@ describe("ChildItemCard", () => {
       id: "C-1",
       parentId: "P-1",
       description: "テストを書く",
+      laneId: "lane-1",
     });
     render(<ChildItemCard item={item} />);
     const badge = screen.getByLabelText("子アイテム");

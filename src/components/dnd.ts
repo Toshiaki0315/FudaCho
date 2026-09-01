@@ -1,28 +1,19 @@
 import type { DragEndEvent } from "@dnd-kit/core";
 import type { LaneOrder } from "../domain/laneOrder";
-import { ALL_STATUSES, type Status } from "../domain/settings";
 
 export type DragEndAction =
-  | { type: "move"; toStatus: Status; index?: number }
-  | { type: "reorder"; status: Status; fromIndex: number; toIndex: number };
+  | { type: "move"; toLaneId: string; index?: number }
+  | { type: "reorder"; laneId: string; fromIndex: number; toIndex: number };
 
-function isStatus(value: string): value is Status {
-  return (ALL_STATUSES as readonly string[]).includes(value);
-}
-
-function laneOf(order: LaneOrder, itemId: string): Status | null {
-  for (const status of ALL_STATUSES) {
-    if (order[status].includes(itemId)) {
-      return status;
+function laneOf(order: LaneOrder, itemId: string): string | null {
+  for (const laneId of Object.keys(order)) {
+    if (order[laneId].includes(itemId)) {
+      return laneId;
     }
   }
   return null;
 }
 
-/**
- * D&D終了時のドラッグ元とドロップ先から、ボードへ適用する操作を決定する。
- * ドロップ先はレーンID（ステータス）またはアイテムIDのいずれか。
- */
 /** dnd-kitのDragEndEventを、ID組での適用関数呼び出しへ変換するハンドラを作る。 */
 export function composeDragHandler(
   apply: (activeId: string, overId: string | null) => void,
@@ -32,6 +23,10 @@ export function composeDragHandler(
   };
 }
 
+/**
+ * D&D終了時のドラッグ元とドロップ先から、ボードへ適用する操作を決定する。
+ * ドロップ先はレーンIDまたはアイテムIDのいずれか。
+ */
 export function resolveDragEnd(
   order: LaneOrder,
   activeId: string,
@@ -40,30 +35,30 @@ export function resolveDragEnd(
   if (overId === null || overId === activeId) {
     return null;
   }
-  const fromStatus = laneOf(order, activeId);
-  if (fromStatus === null) {
+  const fromLaneId = laneOf(order, activeId);
+  if (fromLaneId === null) {
     return null;
   }
 
-  if (isStatus(overId)) {
-    if (overId === fromStatus) {
+  if (overId in order) {
+    if (overId === fromLaneId) {
       return null;
     }
-    return { type: "move", toStatus: overId };
+    return { type: "move", toLaneId: overId };
   }
 
-  const toStatus = laneOf(order, overId);
-  if (toStatus === null) {
+  const toLaneId = laneOf(order, overId);
+  if (toLaneId === null) {
     return null;
   }
-  const overIndex = order[toStatus].indexOf(overId);
-  if (toStatus === fromStatus) {
+  const overIndex = order[toLaneId].indexOf(overId);
+  if (toLaneId === fromLaneId) {
     return {
       type: "reorder",
-      status: fromStatus,
-      fromIndex: order[fromStatus].indexOf(activeId),
+      laneId: fromLaneId,
+      fromIndex: order[fromLaneId].indexOf(activeId),
       toIndex: overIndex,
     };
   }
-  return { type: "move", toStatus, index: overIndex };
+  return { type: "move", toLaneId, index: overIndex };
 }

@@ -4,24 +4,24 @@ import { createEmptyLaneOrder, insertIntoLane } from "../domain/laneOrder";
 import { composeDragHandler, resolveDragEnd } from "./dnd";
 
 function buildOrder() {
-  let order = createEmptyLaneOrder();
-  order = insertIntoLane(order, "ToDo", "P-1");
-  order = insertIntoLane(order, "ToDo", "P-2");
-  order = insertIntoLane(order, "InProgress", "P-3");
+  let order = createEmptyLaneOrder(["lane-1", "lane-2", "lane-3"]);
+  order = insertIntoLane(order, "lane-1", "P-1");
+  order = insertIntoLane(order, "lane-1", "P-2");
+  order = insertIntoLane(order, "lane-2", "P-3");
   return order;
 }
 
 describe("resolveDragEnd", () => {
-  it("レーン（ステータスID）上にドロップした場合はそのレーンへの移動になる", () => {
-    const result = resolveDragEnd(buildOrder(), "P-1", "InProgress");
-    expect(result).toEqual({ type: "move", toStatus: "InProgress" });
+  it("レーンID上にドロップした場合はそのレーンへの移動になる", () => {
+    const result = resolveDragEnd(buildOrder(), "P-1", "lane-2");
+    expect(result).toEqual({ type: "move", toLaneId: "lane-2" });
   });
 
   it("別レーンのアイテム上にドロップした場合、そのアイテムの位置への移動になる", () => {
     const result = resolveDragEnd(buildOrder(), "P-1", "P-3");
     expect(result).toEqual({
       type: "move",
-      toStatus: "InProgress",
+      toLaneId: "lane-2",
       index: 0,
     });
   });
@@ -30,7 +30,7 @@ describe("resolveDragEnd", () => {
     const result = resolveDragEnd(buildOrder(), "P-1", "P-2");
     expect(result).toEqual({
       type: "reorder",
-      status: "ToDo",
+      laneId: "lane-1",
       fromIndex: 0,
       toIndex: 1,
     });
@@ -45,11 +45,11 @@ describe("resolveDragEnd", () => {
   });
 
   it("既に同じレーンのレーンID上にドロップした場合はnullを返す（変更なし）", () => {
-    expect(resolveDragEnd(buildOrder(), "P-1", "ToDo")).toBeNull();
+    expect(resolveDragEnd(buildOrder(), "P-1", "lane-1")).toBeNull();
   });
 
   it("ドラッグ元のアイテムがレーンに存在しない場合はnullを返す", () => {
-    expect(resolveDragEnd(buildOrder(), "X-9", "InProgress")).toBeNull();
+    expect(resolveDragEnd(buildOrder(), "X-9", "lane-2")).toBeNull();
   });
 
   it("ドロップ先がレーンにもアイテムにも該当しない場合はnullを返す", () => {
@@ -63,9 +63,9 @@ describe("composeDragHandler", () => {
     const handler = composeDragHandler(apply);
     handler({
       active: { id: "P-1" },
-      over: { id: "InProgress" },
+      over: { id: "lane-2" },
     } as DragEndEvent);
-    expect(apply).toHaveBeenCalledWith("P-1", "InProgress");
+    expect(apply).toHaveBeenCalledWith("P-1", "lane-2");
   });
 
   it("ドロップ先がない場合はnullを渡す", () => {

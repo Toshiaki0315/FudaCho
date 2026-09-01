@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import type { LaneConfig, Status } from "../domain/settings";
+import type { Lane } from "../domain/lane";
 
 interface KanbanBoardProps {
-  lanes: LaneConfig[];
-  laneContent?: (status: Status) => ReactNode;
+  lanes: Lane[];
+  laneContent?: (laneId: string) => ReactNode;
   onAddItem?: () => void;
 }
 
@@ -14,14 +14,10 @@ export function KanbanBoard({
 }: KanbanBoardProps) {
   return (
     <div className="kanban-board">
-      {lanes.map((lane, index) => (
-        <section
-          key={lane.status}
-          className="kanban-lane"
-          aria-label={lane.displayName}
-        >
-          <h2>{lane.displayName}</h2>
-          {index === 0 && onAddItem && (
+      {lanes.map((lane) => (
+        <section key={lane.id} className="kanban-lane" aria-label={lane.name}>
+          <h2>{lane.name}</h2>
+          {lane.isDefaultEntry && onAddItem && (
             <button
               type="button"
               className="add-item-button"
@@ -30,7 +26,7 @@ export function KanbanBoard({
               ＋新規作成
             </button>
           )}
-          {laneContent?.(lane.status)}
+          {laneContent?.(lane.id)}
         </section>
       ))}
     </div>

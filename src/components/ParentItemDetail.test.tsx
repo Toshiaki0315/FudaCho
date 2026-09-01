@@ -9,7 +9,7 @@ function buildItem() {
     id: "P-1",
     summary: "設計する",
     size: 5,
-    status: "InProgress",
+    laneId: "lane-2",
     assignee: "野村",
     reason: "リリースに必要",
     schedule: "2026-09-30",
@@ -18,15 +18,23 @@ function buildItem() {
   });
 }
 
+function renderDetail(
+  overrides: Partial<Parameters<typeof ParentItemDetail>[0]> = {},
+) {
+  return render(
+    <ParentItemDetail
+      item={buildItem()}
+      laneName="作業中"
+      onSave={vi.fn()}
+      onClose={vi.fn()}
+      {...overrides}
+    />,
+  );
+}
+
 describe("ParentItemDetail", () => {
   it("ダイアログとして表示され、全フィールドの現在値が表示される", () => {
-    render(
-      <ParentItemDetail
-        item={buildItem()}
-        onSave={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
+    renderDetail();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("P-1")).toBeInTheDocument();
     expect(screen.getByLabelText("概要")).toHaveValue("設計する");
@@ -38,26 +46,14 @@ describe("ParentItemDetail", () => {
     expect(screen.getByLabelText("コメント")).toHaveValue("最初のコメント");
   });
 
-  it("ステータスは読み取り専用で表示される（変更はD&Dで行う）", () => {
-    render(
-      <ParentItemDetail
-        item={buildItem()}
-        onSave={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
-    expect(screen.getByText("InProgress")).toBeInTheDocument();
-    expect(screen.queryByLabelText("ステータス")).not.toBeInTheDocument();
+  it("所属レーン名は読み取り専用で表示される（移動はD&Dで行う）", () => {
+    renderDetail();
+    expect(screen.getByText("作業中")).toBeInTheDocument();
+    expect(screen.queryByLabelText("レーン")).not.toBeInTheDocument();
   });
 
   it("サイズの選択肢はフィボナッチ数列のみである", () => {
-    render(
-      <ParentItemDetail
-        item={buildItem()}
-        onSave={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
+    renderDetail();
     const options = screen
       .getAllByRole("option")
       .map((o) => (o as HTMLOptionElement).value);
@@ -67,9 +63,7 @@ describe("ParentItemDetail", () => {
   it("編集して保存すると変更内容がonSaveに渡される", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ParentItemDetail item={buildItem()} onSave={onSave} onClose={vi.fn()} />,
-    );
+    renderDetail({ onSave });
     const summary = screen.getByLabelText("概要");
     await user.clear(summary);
     await user.type(summary, "詳細設計する");
@@ -83,9 +77,7 @@ describe("ParentItemDetail", () => {
   it("担当者・理由・日程・備考も編集して保存できる", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ParentItemDetail item={buildItem()} onSave={onSave} onClose={vi.fn()} />,
-    );
+    renderDetail({ onSave });
     await user.type(screen.getByLabelText("担当者"), "2");
     await user.type(screen.getByLabelText("理由"), "！");
     await user.type(screen.getByLabelText("日程"), "頃");
@@ -104,9 +96,7 @@ describe("ParentItemDetail", () => {
   it("サイズに♾️を選択して保存できる", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ParentItemDetail item={buildItem()} onSave={onSave} onClose={vi.fn()} />,
-    );
+    renderDetail({ onSave });
     await user.selectOptions(screen.getByLabelText("サイズ"), "♾️");
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(onSave).toHaveBeenCalledWith(
@@ -117,9 +107,7 @@ describe("ParentItemDetail", () => {
   it("コメントは1行1件として保存される", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ParentItemDetail item={buildItem()} onSave={onSave} onClose={vi.fn()} />,
-    );
+    renderDetail({ onSave });
     const comments = screen.getByLabelText("コメント");
     await user.clear(comments);
     await user.type(comments, "一つ目{enter}二つ目");
@@ -133,11 +121,19 @@ describe("ParentItemDetail", () => {
     const onSave = vi.fn();
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ParentItemDetail item={buildItem()} onSave={onSave} onClose={onClose} />,
-    );
+    renderDetail({ onSave, onClose });
     await user.click(screen.getByRole("button", { name: "キャンセル" }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("onAddChildを渡すと「＋子アイテムを追加」ボタンが表示されクリックで呼ばれる", async () => {
+    const onAddChild = vi.fn();
+    const user = userEvent.setup();
+    renderDetail({ onAddChild });
+    await user.click(
+      screen.getByRole("button", { name: "＋子アイテムを追加" }),
+    );
+    expect(onAddChild).toHaveBeenCalledTimes(1);
   });
 });

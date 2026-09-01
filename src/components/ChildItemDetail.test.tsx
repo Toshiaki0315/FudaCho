@@ -9,20 +9,32 @@ function buildItem() {
     id: "C-1",
     parentId: "P-1",
     description: "図を描く",
+    laneId: "lane-2",
     assignee: "野村",
     estimatedHours: 4,
     actualHours: 2.5,
-    status: "InProgress",
     startDate: "2026-09-01",
     endDate: "2026-09-02",
   });
 }
 
+function renderDetail(
+  overrides: Partial<Parameters<typeof ChildItemDetail>[0]> = {},
+) {
+  return render(
+    <ChildItemDetail
+      item={buildItem()}
+      laneName="作業中"
+      onSave={vi.fn()}
+      onClose={vi.fn()}
+      {...overrides}
+    />,
+  );
+}
+
 describe("ChildItemDetail", () => {
   it("ダイアログとして表示され、全フィールドの現在値が表示される", () => {
-    render(
-      <ChildItemDetail item={buildItem()} onSave={vi.fn()} onClose={vi.fn()} />,
-    );
+    renderDetail();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("C-1")).toBeInTheDocument();
     expect(screen.getByText(/P-1/)).toBeInTheDocument();
@@ -34,20 +46,16 @@ describe("ChildItemDetail", () => {
     expect(screen.getByLabelText("終了日")).toHaveValue("2026-09-02");
   });
 
-  it("ステータスは読み取り専用で表示される（変更はD&Dで行う）", () => {
-    render(
-      <ChildItemDetail item={buildItem()} onSave={vi.fn()} onClose={vi.fn()} />,
-    );
-    expect(screen.getByText("InProgress")).toBeInTheDocument();
-    expect(screen.queryByLabelText("ステータス")).not.toBeInTheDocument();
+  it("所属レーン名は読み取り専用で表示される（移動はD&Dで行う）", () => {
+    renderDetail();
+    expect(screen.getByText("作業中")).toBeInTheDocument();
+    expect(screen.queryByLabelText("レーン")).not.toBeInTheDocument();
   });
 
   it("全フィールドを編集して保存すると変更内容がonSaveに渡される", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ChildItemDetail item={buildItem()} onSave={onSave} onClose={vi.fn()} />,
-    );
+    renderDetail({ onSave });
     const description = screen.getByLabelText("作業内容");
     await user.clear(description);
     await user.type(description, "詳細図を描く");
@@ -78,9 +86,7 @@ describe("ChildItemDetail", () => {
   it("見積時間・実績時間を空にするとnullとして保存される", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ChildItemDetail item={buildItem()} onSave={onSave} onClose={vi.fn()} />,
-    );
+    renderDetail({ onSave });
     await user.clear(screen.getByLabelText("見積時間"));
     await user.clear(screen.getByLabelText("実績時間"));
     await user.click(screen.getByRole("button", { name: "保存" }));
@@ -94,8 +100,9 @@ describe("ChildItemDetail", () => {
       id: "C-2",
       parentId: "P-1",
       description: "作業",
+      laneId: "lane-1",
     });
-    render(<ChildItemDetail item={item} onSave={vi.fn()} onClose={vi.fn()} />);
+    renderDetail({ item });
     expect(screen.getByLabelText("見積時間")).toHaveValue(null);
     expect(screen.getByLabelText("実績時間")).toHaveValue(null);
   });
@@ -104,9 +111,7 @@ describe("ChildItemDetail", () => {
     const onSave = vi.fn();
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(
-      <ChildItemDetail item={buildItem()} onSave={onSave} onClose={onClose} />,
-    );
+    renderDetail({ onSave, onClose });
     await user.click(screen.getByRole("button", { name: "キャンセル" }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onSave).not.toHaveBeenCalled();

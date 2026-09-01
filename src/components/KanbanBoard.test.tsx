@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { createLane } from "../domain/lane";
 import { createDefaultSettings } from "../domain/settings";
 import { KanbanBoard } from "./KanbanBoard";
 
@@ -31,8 +32,8 @@ describe("KanbanBoard", () => {
     render(
       <KanbanBoard
         lanes={[
-          { status: "ToDo", displayName: "やること" },
-          { status: "Done", displayName: "おわった" },
+          createLane({ id: "lane-1", name: "やること", isDefaultEntry: true }),
+          createLane({ id: "lane-2", name: "おわった" }),
         ]}
       />,
     );
@@ -45,24 +46,40 @@ describe("KanbanBoard", () => {
     ).toBeInTheDocument();
   });
 
-  it("onAddItemを渡すと最初のレーンに「＋新規作成」ボタンが表示される", async () => {
+  it("onAddItemを渡すと投入先レーンに「＋新規作成」ボタンが表示される", async () => {
     const onAddItem = vi.fn();
     const { lanes } = createDefaultSettings();
     render(<KanbanBoard lanes={lanes} onAddItem={onAddItem} />);
-    const firstLane = screen.getByRole("region", { name: "未着手" });
-    const button = within(firstLane).getByRole("button", {
+    const entryLane = screen.getByRole("region", { name: "未着手" });
+    const button = within(entryLane).getByRole("button", {
       name: "＋新規作成",
     });
     await userEvent.setup().click(button);
     expect(onAddItem).toHaveBeenCalledTimes(1);
   });
 
-  it("「＋新規作成」ボタンは最初のレーン以外には表示されない", () => {
+  it("「＋新規作成」ボタンは投入先レーン以外には表示されない", () => {
     const { lanes } = createDefaultSettings();
     render(<KanbanBoard lanes={lanes} onAddItem={vi.fn()} />);
     expect(screen.getAllByRole("button", { name: "＋新規作成" })).toHaveLength(
       1,
     );
+  });
+
+  it("投入先が2番目のレーンでもそのレーンにボタンが表示される", () => {
+    render(
+      <KanbanBoard
+        lanes={[
+          createLane({ id: "lane-1", name: "完了済み" }),
+          createLane({ id: "lane-2", name: "受付", isDefaultEntry: true }),
+        ]}
+        onAddItem={vi.fn()}
+      />,
+    );
+    const entryLane = screen.getByRole("region", { name: "受付" });
+    expect(
+      within(entryLane).getByRole("button", { name: "＋新規作成" }),
+    ).toBeInTheDocument();
   });
 
   it("onAddItem未指定の場合はボタンを表示しない", () => {
@@ -78,10 +95,10 @@ describe("KanbanBoard", () => {
     render(
       <KanbanBoard
         lanes={lanes}
-        laneContent={(status) => <p>{status}のカード</p>}
+        laneContent={(laneId) => <p>{laneId}のカード</p>}
       />,
     );
     const todoLane = screen.getByRole("region", { name: "未着手" });
-    expect(within(todoLane).getByText("ToDoのカード")).toBeInTheDocument();
+    expect(within(todoLane).getByText("lane-1のカード")).toBeInTheDocument();
   });
 });

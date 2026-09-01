@@ -1,36 +1,44 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import type { Lane } from "../domain/lane";
 import { createDefaultSettings } from "../domain/settings";
 import { SettingsDialog } from "./SettingsDialog";
 
+function renderDialog(
+  overrides: Partial<Parameters<typeof SettingsDialog>[0]> = {},
+) {
+  return render(
+    <SettingsDialog
+      settings={createDefaultSettings()}
+      onSave={vi.fn()}
+      onClose={vi.fn()}
+      {...overrides}
+    />,
+  );
+}
+
 describe("SettingsDialog", () => {
   it("プロジェクト名と全レーンの現在値を表示する", () => {
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
+    renderDialog();
     expect(screen.getByRole("dialog", { name: "設定" })).toBeInTheDocument();
     expect(screen.getByLabelText("プロジェクト名")).toHaveValue("札帖");
     const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(5);
-    expect(within(rows[0]).getByText("ToDo")).toBeInTheDocument();
     expect(within(rows[0]).getByRole("textbox")).toHaveValue("未着手");
   });
 
-  it("プロジェクト名とレーン名を変更して保存できる", async () => {
+  it("投入先レーンにはバッジが表示される", () => {
+    renderDialog();
+    const rows = screen.getAllByRole("listitem");
+    expect(within(rows[0]).getByText("投入先")).toBeInTheDocument();
+    expect(within(rows[1]).queryByText("投入先")).not.toBeInTheDocument();
+  });
+
+  it("プロジェクト名とレーン名を変更して保存できる（IDは不変）", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={onSave}
-        onClose={vi.fn()}
-      />,
-    );
+    renderDialog({ onSave });
     const projectName = screen.getByLabelText("プロジェクト名");
     await user.clear(projectName);
     await user.type(projectName, "新しい名前");
@@ -40,70 +48,77 @@ describe("SettingsDialog", () => {
     await user.clear(firstLaneName);
     await user.type(firstLaneName, "バックログ");
     await user.click(screen.getByRole("button", { name: "保存" }));
-    expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        projectName: "新しい名前",
-        lanes: expect.arrayContaining([
-          { status: "ToDo", displayName: "バックログ" },
-        ]),
-      }),
-    );
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.projectName).toBe("新しい名前");
+    expect(saved.lanes[0]).toMatchObject({
+      id: "lane-1",
+      name: "バックログ",
+      isDefaultEntry: true,
+    });
   });
 
   it("レーンを削除して保存できる", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={onSave}
-        onClose={vi.fn()}
-      />,
-    );
+    renderDialog({ onSave });
     const closeLane = screen.getAllByRole("listitem")[3];
     await user.click(within(closeLane).getByRole("button", { name: "削除" }));
     expect(screen.getAllByRole("listitem")).toHaveLength(4);
     await user.click(screen.getByRole("button", { name: "保存" }));
     const saved = onSave.mock.calls[0][0];
-    expect(saved.lanes.map((l: { status: string }) => l.status)).toEqual([
-      "ToDo",
-      "InProgress",
-      "Done",
-      "Dropped",
+    expect(saved.lanes.map((l: Lane) => l.id)).toEqual([
+      "lane-1",
+      "lane-2",
+      "lane-3",
+      "lane-5",
     ]);
   });
 
-  it("削除したレーンのステータスを再追加できる", async () => {
+  it("レーンを追加すると新しいIDが採番される", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={onSave}
-        onClose={vi.fn()}
-      />,
-    );
-    const closeLane = screen.getAllByRole("listitem")[3];
-    await user.click(within(closeLane).getByRole("button", { name: "削除" }));
+    renderDialog({ onSave });
     await user.click(screen.getByRole("button", { name: "＋レーンを追加" }));
     const rows = screen.getAllByRole("listitem");
-    expect(rows).toHaveLength(5);
-    // 再追加されたレーンは未使用ステータス（Close）でデフォルト名を持つ
-    expect(within(rows[4]).getByText("Close")).toBeInTheDocument();
-    expect(within(rows[4]).getByRole("textbox")).toHaveValue("Close");
+    expect(rows).toHaveLength(6);
+    expect(within(rows[5]).getByRole("textbox")).toHaveValue("新しいレーン");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.lanes[5]).toMatchObject({
+      id: "lane-6",
+      name: "新しいレーン",
+    });
   });
 
-  it("全ステータス使用中は追加ボタンを表示しない", () => {
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={vi.fn()}
-        onClose={vi.fn()}
-      />,
-    );
-    expect(
-      screen.queryByRole("button", { name: "＋レーンを追加" }),
-    ).not.toBeInTheDocument();
+  it("削除後に追加してもIDは重複しない", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDialog({ onSave });
+    // lane-5（中断）を削除してから追加 → 新IDは lane-6 ではなく最大値+1
+    const rows = screen.getAllByRole("listitem");
+    await user.click(within(rows[4]).getByRole("button", { name: "削除" }));
+    await user.click(screen.getByRole("button", { name: "＋レーンを追加" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    const saved = onSave.mock.calls[0][0];
+    const ids = saved.lanes.map((l: Lane) => l.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toContain("lane-5");
+  });
+
+  it("lane-n形式でないIDがあっても追加時の採番は壊れない", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    const settings = createDefaultSettings();
+    settings.lanes = [
+      { ...settings.lanes[0], id: "custom-id" },
+      ...settings.lanes.slice(1),
+    ];
+    renderDialog({ onSave, settings });
+    await user.click(screen.getByRole("button", { name: "＋レーンを追加" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    const saved = onSave.mock.calls[0][0];
+    const ids = saved.lanes.map((l: Lane) => l.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("保存が失敗した場合はエラーメッセージを表示して閉じない", async () => {
@@ -112,13 +127,7 @@ describe("SettingsDialog", () => {
     });
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={onSave}
-        onClose={onClose}
-      />,
-    );
+    renderDialog({ onSave, onClose });
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(screen.getByText(/レーン名は必須です/)).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
@@ -129,13 +138,7 @@ describe("SettingsDialog", () => {
       throw "文字列の例外";
     });
     const user = userEvent.setup();
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={onSave}
-        onClose={vi.fn()}
-      />,
-    );
+    renderDialog({ onSave });
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(screen.getByText("文字列の例外")).toBeInTheDocument();
   });
@@ -143,13 +146,7 @@ describe("SettingsDialog", () => {
   it("保存が成功したら閉じる", async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={vi.fn()}
-        onClose={onClose}
-      />,
-    );
+    renderDialog({ onClose });
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -158,13 +155,7 @@ describe("SettingsDialog", () => {
     const onSave = vi.fn();
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(
-      <SettingsDialog
-        settings={createDefaultSettings()}
-        onSave={onSave}
-        onClose={onClose}
-      />,
-    );
+    renderDialog({ onSave, onClose });
     await user.click(screen.getByRole("button", { name: "キャンセル" }));
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onSave).not.toHaveBeenCalled();

@@ -11,7 +11,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useState, type ReactNode } from "react";
-import type { Status } from "../domain/settings";
+import type { Lane } from "../domain/lane";
 import { useBoardStore } from "../store/boardStore";
 import { ChildItemCard } from "./ChildItemCard";
 import { ChildItemDetail } from "./ChildItemDetail";
@@ -22,12 +22,12 @@ import { ParentItemDetail } from "./ParentItemDetail";
 import { SortableCard } from "./SortableCard";
 
 interface LaneDropAreaProps {
-  status: Status;
+  laneId: string;
   children: ReactNode;
 }
 
-function LaneDropArea({ status, children }: LaneDropAreaProps) {
-  const { setNodeRef } = useDroppable({ id: status });
+function LaneDropArea({ laneId, children }: LaneDropAreaProps) {
+  const { setNodeRef } = useDroppable({ id: laneId });
   return (
     <div ref={setNodeRef} className="lane-drop-area">
       {children}
@@ -53,12 +53,17 @@ export function BoardView() {
   const dropItem = useBoardStore((state) => state.dropItem);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const renderCard = (itemId: string, status: Status) => {
+  // アイテムのあるレーンは削除できない（updateSettingsが保証）ため、レーンは必ず見つかる
+  const laneNameOf = (laneId: string) =>
+    settings.lanes.find((lane) => lane.id === laneId)!.name;
+
+  const renderCard = (itemId: string, lane: Lane) => {
     const parent = parents[itemId];
     const card = parent ? (
       <ParentItemCard
         item={parent}
         children_={parent.childIds.map((childId) => children[childId])}
+        lanes={settings.lanes}
       />
     ) : (
       <ChildItemCard item={children[itemId]} />
@@ -66,7 +71,7 @@ export function BoardView() {
     return (
       <div onDoubleClick={() => setSelectedId(itemId)}>
         {card}
-        {status === "InProgress" && (
+        {lane.hasDropAction && (
           <button
             type="button"
             className="drop-item-button"
@@ -79,24 +84,27 @@ export function BoardView() {
     );
   };
 
+  const laneContent = (laneId: string) => {
+    const lane = settings.lanes.find((l) => l.id === laneId)!;
+    return (
+      <SortableContext
+        items={laneOrder[laneId]}
+        strategy={verticalListSortingStrategy}
+      >
+        <LaneDropArea laneId={laneId}>
+          {laneOrder[laneId].map((itemId) => (
+            <SortableCard key={itemId} id={itemId}>
+              {renderCard(itemId, lane)}
+            </SortableCard>
+          ))}
+        </LaneDropArea>
+      </SortableContext>
+    );
+  };
+
   const selectedParent = selectedId ? parents[selectedId] : undefined;
   const selectedChild = selectedId ? children[selectedId] : undefined;
   const closeDetail = () => setSelectedId(null);
-
-  const laneContent = (status: Status) => (
-    <SortableContext
-      items={laneOrder[status]}
-      strategy={verticalListSortingStrategy}
-    >
-      <LaneDropArea status={status}>
-        {laneOrder[status].map((itemId) => (
-          <SortableCard key={itemId} id={itemId}>
-            {renderCard(itemId, status)}
-          </SortableCard>
-        ))}
-      </LaneDropArea>
-    </SortableContext>
-  );
 
   return (
     <DndContext sensors={sensors} onDragEnd={composeDragHandler(handleDragEnd)}>
@@ -108,6 +116,7 @@ export function BoardView() {
       {selectedParent && (
         <ParentItemDetail
           item={selectedParent}
+          laneName={laneNameOf(selectedParent.laneId)}
           onSave={(patch) => {
             updateParent(selectedParent.id, patch);
             closeDetail();
@@ -125,6 +134,7 @@ export function BoardView() {
       {selectedChild && (
         <ChildItemDetail
           item={selectedChild}
+          laneName={laneNameOf(selectedChild.laneId)}
           onSave={(patch) => {
             updateChild(selectedChild.id, patch);
             closeDetail();

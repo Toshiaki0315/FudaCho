@@ -1,5 +1,3 @@
-import type { Status } from "./settings";
-
 export interface ChildItem {
   id: string;
   parentId: string;
@@ -7,7 +5,7 @@ export interface ChildItem {
   assignee: string;
   estimatedHours: number | null;
   actualHours: number | null;
-  status: Status;
+  laneId: string;
   startDate: string;
   endDate: string;
 }
@@ -16,10 +14,10 @@ export interface CreateChildItemInput {
   id: string;
   parentId: string;
   description: string;
+  laneId: string;
   assignee?: string;
   estimatedHours?: number | null;
   actualHours?: number | null;
-  status?: Status;
   startDate?: string;
   endDate?: string;
 }
@@ -30,6 +28,9 @@ export function createChildItem(input: CreateChildItemInput): ChildItem {
   }
   if (input.parentId === "") {
     throw new Error("親IDは必須です");
+  }
+  if (input.laneId === "") {
+    throw new Error("レーンIDは必須です");
   }
   const estimatedHours = input.estimatedHours ?? null;
   if (estimatedHours !== null && estimatedHours < 0) {
@@ -46,7 +47,7 @@ export function createChildItem(input: CreateChildItemInput): ChildItem {
     assignee: input.assignee ?? "",
     estimatedHours,
     actualHours,
-    status: input.status ?? "ToDo",
+    laneId: input.laneId,
     startDate: input.startDate ?? "",
     endDate: input.endDate ?? "",
   };

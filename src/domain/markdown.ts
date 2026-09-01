@@ -3,13 +3,13 @@ import {
   type ChildItem,
   type CreateChildItemInput,
 } from "./childItem";
+import { findDefaultEntryLane, type Lane } from "./lane";
 import {
   createParentItem,
   isValidSize,
   type CreateParentItemInput,
   type ParentItem,
 } from "./parentItem";
-import { ALL_STATUSES, type Status } from "./settings";
 
 export interface BoardSnapshot {
   projectName: string;
@@ -17,11 +17,31 @@ export interface BoardSnapshot {
   children: ChildItem[];
 }
 
-function childLine(child: ChildItem): string {
-  const checked = child.status === "Done" || child.status === "Close";
+function laneNameOf(lanes: readonly Lane[], laneId: string): string {
+  const lane = lanes.find((l) => l.id === laneId);
+  if (!lane) {
+    throw new Error(`レーン ${laneId} が見つかりません`);
+  }
+  return lane.name;
+}
+
+function laneByName(lanes: readonly Lane[], name: string): Lane {
+  const lane = lanes.find((l) => l.name === name);
+  if (!lane) {
+    throw new Error(`不正なレーン名です: ${name}`);
+  }
+  return lane;
+}
+
+function childLine(child: ChildItem, lanes: readonly Lane[]): string {
+  const lane = lanes.find((l) => l.id === child.laneId);
+  if (!lane) {
+    throw new Error(`レーン ${child.laneId} が見つかりません`);
+  }
+  const checked = lane.countsAsDone;
   const meta: string[] = [];
-  if (child.status !== "ToDo") {
-    meta.push(`ステータス: ${child.status}`);
+  if (!lane.isDefaultEntry) {
+    meta.push(`レーン: ${lane.name}`);
   }
   if (child.assignee !== "") {
     meta.push(`担当: ${child.assignee}`);
@@ -42,11 +62,14 @@ function childLine(child: ChildItem): string {
   return `- [${checked ? "x" : " "}] ${child.id}: ${child.description}${metaText}`;
 }
 
-export function generateMarkdown(snapshot: BoardSnapshot): string {
+export function generateMarkdown(
+  snapshot: BoardSnapshot,
+  lanes: readonly Lane[],
+): string {
   const lines: string[] = [`# ${snapshot.projectName}`];
   for (const parent of snapshot.parents) {
     lines.push("", `## ${parent.id}: ${parent.summary}`);
-    lines.push(`- ステータス: ${parent.status}`);
+    lines.push(`- レーン: ${laneNameOf(lanes, parent.laneId)}`);
     lines.push(`- サイズ: ${parent.size}`);
     if (parent.assignee !== "") {
       lines.push(`- 担当者: ${parent.assignee}`);
@@ -70,18 +93,11 @@ export function generateMarkdown(snapshot: BoardSnapshot): string {
     if (children.length > 0) {
       lines.push("", "### 子アイテム");
       for (const child of children) {
-        lines.push(childLine(child));
+        lines.push(childLine(child, lanes));
       }
     }
   }
   return lines.join("\n") + "\n";
-}
-
-function parseStatus(value: string): Status {
-  if (!(ALL_STATUSES as readonly string[]).includes(value)) {
-    throw new Error(`不正なステータスです: ${value}`);
-  }
-  return value as Status;
 }
 
 interface ParsingParent {
@@ -96,13 +112,21 @@ function parseChildLine(
   parentId: string,
   checked: boolean,
   idAndRest: string,
+  lanes: readonly Lane[],
 ): CreateChildItemInput {
   const colon = idAndRest.indexOf(": ");
   const id = idAndRest.slice(0, colon);
   let description = idAndRest.slice(colon + 2);
-  const input: CreateChildItemInput = { id, parentId, description };
+  const defaultLane = findDefaultEntryLane([...lanes]);
+  const doneLane = lanes.find((l) => l.countsAsDone);
+  const input: CreateChildItemInput = {
+    id,
+    parentId,
+    description,
+    laneId: defaultLane.id,
+  };
   const metaMatch = description.match(/^(.*) \(([^()]*)\)$/);
-  let status: Status | null = null;
+  let laneId: string | null = null;
   if (metaMatch) {
     description = metaMatch[1];
     input.description = description;
@@ -112,8 +136,8 @@ function parseChildLine(
         throw new Error(`子アイテムのメタデータを解釈できません: ${line}`);
       }
       const [, key, value] = kv;
-      if (key === "ステータス") {
-        status = parseStatus(value);
+      if (key === "レーン") {
+        laneId = laneByName(lanes, value).id;
       } else if (key === "担当") {
         input.assignee = value;
       } else if (key === "見積") {
@@ -129,15 +153,23 @@ function parseChildLine(
       }
     }
   }
-  input.status = status ?? (checked ? "Done" : "ToDo");
+  if (laneId !== null) {
+    input.laneId = laneId;
+  } else if (checked && doneLane) {
+    input.laneId = doneLane.id;
+  }
   return input;
 }
 
-export function parseMarkdown(markdown: string): BoardSnapshot {
+export function parseMarkdown(
+  markdown: string,
+  lanes: readonly Lane[],
+): BoardSnapshot {
   const lines = markdown.split("\n");
   let projectName: string | null = null;
   const parsingParents: ParsingParent[] = [];
   const children: ChildItem[] = [];
+  const defaultLane = findDefaultEntryLane([...lanes]);
 
   const currentParent = (): ParsingParent | null =>
     parsingParents.length > 0
@@ -153,7 +185,7 @@ export function parseMarkdown(markdown: string): BoardSnapshot {
     const h2 = line.match(/^## (\S+): (.+)$/);
     if (h2) {
       parsingParents.push({
-        input: { id: h2[1], summary: h2[2] },
+        input: { id: h2[1], summary: h2[2], laneId: defaultLane.id },
         comments: [],
         childIds: [],
         inComments: false,
@@ -171,6 +203,7 @@ export function parseMarkdown(markdown: string): BoardSnapshot {
         parent.input.id,
         childMatch[1] === "x",
         childMatch[2],
+        lanes,
       );
       children.push(createChildItem(input));
       parent.childIds.push(input.id);
@@ -185,8 +218,8 @@ export function parseMarkdown(markdown: string): BoardSnapshot {
     if (field) {
       const [, key, value = ""] = field;
       parent.inComments = false;
-      if (key === "ステータス") {
-        parent.input.status = parseStatus(value);
+      if (key === "レーン") {
+        parent.input.laneId = laneByName(lanes, value).id;
       } else if (key === "サイズ") {
         const size = value === "♾️" ? value : Number(value);
         if (!isValidSize(size)) {

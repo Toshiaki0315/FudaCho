@@ -1,14 +1,19 @@
 import { useState } from "react";
-import {
-  ALL_STATUSES,
-  type LaneConfig,
-  type Settings,
-} from "../domain/settings";
+import { createLane, type Lane } from "../domain/lane";
+import type { Settings } from "../domain/settings";
 
 interface SettingsDialogProps {
   settings: Settings;
   onSave: (settings: Settings) => void;
   onClose: () => void;
+}
+
+function nextLaneId(lanes: Lane[]): string {
+  const max = lanes.reduce((acc, lane) => {
+    const match = lane.id.match(/^lane-(\d+)$/);
+    return match ? Math.max(acc, Number(match[1])) : acc;
+  }, 0);
+  return `lane-${max + 1}`;
 }
 
 export function SettingsDialog({
@@ -17,17 +22,11 @@ export function SettingsDialog({
   onClose,
 }: SettingsDialogProps) {
   const [projectName, setProjectName] = useState(settings.projectName);
-  const [lanes, setLanes] = useState<LaneConfig[]>(settings.lanes);
+  const [lanes, setLanes] = useState<Lane[]>(settings.lanes);
   const [error, setError] = useState<string | null>(null);
 
-  const unusedStatuses = ALL_STATUSES.filter(
-    (status) => !lanes.some((lane) => lane.status === status),
-  );
-
-  const renameLane = (index: number, displayName: string) => {
-    setLanes(
-      lanes.map((lane, i) => (i === index ? { ...lane, displayName } : lane)),
-    );
+  const renameLane = (index: number, name: string) => {
+    setLanes(lanes.map((lane, i) => (i === index ? { ...lane, name } : lane)));
   };
 
   const removeLane = (index: number) => {
@@ -35,8 +34,10 @@ export function SettingsDialog({
   };
 
   const addLane = () => {
-    const status = unusedStatuses[0];
-    setLanes([...lanes, { status, displayName: status }]);
+    setLanes([
+      ...lanes,
+      createLane({ id: nextLaneId(lanes), name: "新しいレーン" }),
+    ]);
   };
 
   const handleSave = () => {
@@ -61,23 +62,24 @@ export function SettingsDialog({
         <p className="settings-lanes-title">レーン</p>
         <ul className="settings-lanes">
           {lanes.map((lane, index) => (
-            <li key={lane.status} className="settings-lane-row">
-              <span className="settings-lane-status">{lane.status}</span>
+            <li key={lane.id} className="settings-lane-row">
               <input
-                value={lane.displayName}
+                aria-label={`レーン名（${lane.id}）`}
+                value={lane.name}
                 onChange={(e) => renameLane(index, e.target.value)}
               />
+              {lane.isDefaultEntry && (
+                <span className="settings-lane-tag">投入先</span>
+              )}
               <button type="button" onClick={() => removeLane(index)}>
                 削除
               </button>
             </li>
           ))}
         </ul>
-        {unusedStatuses.length > 0 && (
-          <button type="button" onClick={addLane}>
-            ＋レーンを追加
-          </button>
-        )}
+        <button type="button" onClick={addLane}>
+          ＋レーンを追加
+        </button>
         {error !== null && <p className="import-error">{error}</p>}
         <footer className="item-detail-footer">
           <button type="button" onClick={onClose}>

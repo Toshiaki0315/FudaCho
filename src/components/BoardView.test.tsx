@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useBoardStore } from "../store/boardStore";
 import { BoardView } from "./BoardView";
 
+// デフォルトレーン: lane-1=未着手, lane-2=作業中, lane-3=完了, lane-4=クローズ, lane-5=中断
+
 describe("BoardView", () => {
   beforeEach(() => {
     useBoardStore.getState().reset();
@@ -13,7 +15,7 @@ describe("BoardView", () => {
     const store = useBoardStore.getState();
     store.addParent({ summary: "設計する" });
     useBoardStore.getState().addParent({ summary: "実装する" });
-    useBoardStore.getState().moveItem("P-2", "InProgress");
+    useBoardStore.getState().moveItem("P-2", "lane-2");
     render(<BoardView />);
     const todoLane = screen.getByRole("region", { name: "未着手" });
     expect(within(todoLane).getByText("設計する")).toBeInTheDocument();
@@ -34,7 +36,7 @@ describe("BoardView", () => {
     const store = useBoardStore.getState();
     store.addParent({ summary: "A" });
     useBoardStore.getState().addParent({ summary: "B" });
-    useBoardStore.getState().reorderLane("ToDo", 1, 0);
+    useBoardStore.getState().reorderLane("lane-1", 1, 0);
     render(<BoardView />);
     const todoLane = screen.getByRole("region", { name: "未着手" });
     const cards = within(todoLane).getAllByRole("article");
@@ -50,10 +52,10 @@ describe("BoardView", () => {
     expect(within(todoLane).getByText("P-1")).toBeInTheDocument();
   });
 
-  it("作業中レーンのカードにDropボタンが表示される", () => {
+  it("Drop操作を持つレーン（作業中）のカードにDropボタンが表示される", () => {
     const store = useBoardStore.getState();
     store.addParent({ summary: "設計する" });
-    useBoardStore.getState().moveItem("P-1", "InProgress");
+    useBoardStore.getState().moveItem("P-1", "lane-2");
     render(<BoardView />);
     const inProgressLane = screen.getByRole("region", { name: "作業中" });
     expect(
@@ -61,7 +63,7 @@ describe("BoardView", () => {
     ).toBeInTheDocument();
   });
 
-  it("作業中以外のレーンのカードにはDropボタンが表示されない", () => {
+  it("Drop操作を持たないレーンのカードにはDropボタンが表示されない", () => {
     useBoardStore.getState().addParent({ summary: "設計する" });
     render(<BoardView />);
     expect(
@@ -73,22 +75,22 @@ describe("BoardView", () => {
     const user = userEvent.setup();
     const store = useBoardStore.getState();
     store.addParent({ summary: "設計する" });
-    useBoardStore.getState().moveItem("P-1", "InProgress");
+    useBoardStore.getState().moveItem("P-1", "lane-2");
     render(<BoardView />);
     await user.click(screen.getByRole("button", { name: "Drop" }));
-    expect(useBoardStore.getState().parents["P-1"].status).toBe("Dropped");
+    expect(useBoardStore.getState().parents["P-1"].laneId).toBe("lane-5");
     const droppedLane = screen.getByRole("region", { name: "中断" });
     expect(within(droppedLane).getByText("設計する")).toBeInTheDocument();
   });
 
-  it("親カードをダブルクリックすると詳細ビューが開く", async () => {
+  it("親カードをダブルクリックすると詳細ビューが開きレーン名が表示される", async () => {
     const user = userEvent.setup();
     useBoardStore.getState().addParent({ summary: "設計する" });
     render(<BoardView />);
     await user.dblClick(screen.getByText("設計する"));
-    expect(
-      screen.getByRole("dialog", { name: "P-1 の詳細" }),
-    ).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog", { name: "P-1 の詳細" });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText("未着手")).toBeInTheDocument();
     expect(screen.getByLabelText("概要")).toHaveValue("設計する");
   });
 

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { createLane } from "../domain/lane";
 import { useBoardStore } from "./boardStore";
+
+// デフォルトレーン: lane-1=未着手, lane-2=作業中, lane-3=完了, lane-4=クローズ, lane-5=中断
 
 describe("boardStore", () => {
   beforeEach(() => {
@@ -17,12 +20,12 @@ describe("boardStore", () => {
       const state = useBoardStore.getState();
       expect(state.parents).toEqual({});
       expect(state.children).toEqual({});
-      expect(state.laneOrder.ToDo).toEqual([]);
+      expect(state.laneOrder["lane-1"]).toEqual([]);
     });
   });
 
   describe("addParent", () => {
-    it("親アイテムを作成しToDoレーンの末尾に追加、IDは連番で採番される", () => {
+    it("親アイテムを作成し投入先レーンの末尾に追加、IDは連番で採番される", () => {
       const store = useBoardStore.getState();
       const id1 = store.addParent({ summary: "設計する" });
       const id2 = store.addParent({ summary: "実装する" });
@@ -30,8 +33,8 @@ describe("boardStore", () => {
       expect(id2).toBe("P-2");
       const state = useBoardStore.getState();
       expect(state.parents["P-1"].summary).toBe("設計する");
-      expect(state.parents["P-1"].status).toBe("ToDo");
-      expect(state.laneOrder.ToDo).toEqual(["P-1", "P-2"]);
+      expect(state.parents["P-1"].laneId).toBe("lane-1");
+      expect(state.laneOrder["lane-1"]).toEqual(["P-1", "P-2"]);
     });
 
     it("サイズや担当者も指定できる", () => {
@@ -47,7 +50,7 @@ describe("boardStore", () => {
   });
 
   describe("addChild", () => {
-    it("子アイテムを作成し親に紐付け、ToDoレーンに追加する", () => {
+    it("子アイテムを作成し親に紐付け、投入先レーンに追加する", () => {
       const store = useBoardStore.getState();
       const parentId = store.addParent({ summary: "設計する" });
       const childId = useBoardStore
@@ -57,7 +60,7 @@ describe("boardStore", () => {
       const state = useBoardStore.getState();
       expect(state.children["C-1"].parentId).toBe("P-1");
       expect(state.parents["P-1"].childIds).toContain("C-1");
-      expect(state.laneOrder.ToDo).toEqual(["P-1", "C-1"]);
+      expect(state.laneOrder["lane-1"]).toEqual(["P-1", "C-1"]);
     });
 
     it("存在しない親IDを指定するとエラーになる", () => {
@@ -69,41 +72,41 @@ describe("boardStore", () => {
     });
   });
 
-  describe("moveItem（レーン間移動 = ステータス変更）", () => {
-    it("親アイテムを別レーンに移動するとステータスも変わる", () => {
+  describe("moveItem（レーン間移動）", () => {
+    it("親アイテムを別レーンに移動するとlaneIdも変わる", () => {
       const store = useBoardStore.getState();
       store.addParent({ summary: "設計する" });
-      useBoardStore.getState().moveItem("P-1", "InProgress");
+      useBoardStore.getState().moveItem("P-1", "lane-2");
       const state = useBoardStore.getState();
-      expect(state.parents["P-1"].status).toBe("InProgress");
-      expect(state.laneOrder.ToDo).toEqual([]);
-      expect(state.laneOrder.InProgress).toEqual(["P-1"]);
+      expect(state.parents["P-1"].laneId).toBe("lane-2");
+      expect(state.laneOrder["lane-1"]).toEqual([]);
+      expect(state.laneOrder["lane-2"]).toEqual(["P-1"]);
     });
 
     it("子アイテムも移動できる", () => {
       const store = useBoardStore.getState();
       const parentId = store.addParent({ summary: "設計する" });
       useBoardStore.getState().addChild({ parentId, description: "作業" });
-      useBoardStore.getState().moveItem("C-1", "Done");
+      useBoardStore.getState().moveItem("C-1", "lane-3");
       const state = useBoardStore.getState();
-      expect(state.children["C-1"].status).toBe("Done");
-      expect(state.laneOrder.Done).toEqual(["C-1"]);
+      expect(state.children["C-1"].laneId).toBe("lane-3");
+      expect(state.laneOrder["lane-3"]).toEqual(["C-1"]);
     });
 
     it("挿入位置を指定して移動できる", () => {
       const store = useBoardStore.getState();
       store.addParent({ summary: "A" });
       useBoardStore.getState().addParent({ summary: "B" });
-      useBoardStore.getState().moveItem("P-1", "InProgress");
-      useBoardStore.getState().moveItem("P-2", "InProgress", 0);
-      expect(useBoardStore.getState().laneOrder.InProgress).toEqual([
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      useBoardStore.getState().moveItem("P-2", "lane-2", 0);
+      expect(useBoardStore.getState().laneOrder["lane-2"]).toEqual([
         "P-2",
         "P-1",
       ]);
     });
 
     it("存在しないIDを移動するとエラーになる", () => {
-      expect(() => useBoardStore.getState().moveItem("X-1", "Done")).toThrow(
+      expect(() => useBoardStore.getState().moveItem("X-1", "lane-3")).toThrow(
         /X-1/,
       );
     });
@@ -115,12 +118,70 @@ describe("boardStore", () => {
       store.addParent({ summary: "A" });
       useBoardStore.getState().addParent({ summary: "B" });
       useBoardStore.getState().addParent({ summary: "C" });
-      useBoardStore.getState().reorderLane("ToDo", 2, 0);
-      expect(useBoardStore.getState().laneOrder.ToDo).toEqual([
+      useBoardStore.getState().reorderLane("lane-1", 2, 0);
+      expect(useBoardStore.getState().laneOrder["lane-1"]).toEqual([
         "P-3",
         "P-1",
         "P-2",
       ]);
+    });
+  });
+
+  describe("updateSettings", () => {
+    it("プロジェクト名とレーン設定を更新する", () => {
+      useBoardStore.getState().updateSettings({
+        projectName: "新プロジェクト",
+        lanes: [
+          createLane({ id: "lane-1", name: "やること", isDefaultEntry: true }),
+          createLane({ id: "lane-3", name: "おわり", countsAsDone: true }),
+        ],
+      });
+      const { settings, laneOrder } = useBoardStore.getState();
+      expect(settings.projectName).toBe("新プロジェクト");
+      expect(settings.lanes.map((l) => l.name)).toEqual(["やること", "おわり"]);
+      expect(Object.keys(laneOrder)).toEqual(["lane-1", "lane-3"]);
+    });
+
+    it("レーンを追加するとlaneOrderにも空レーンが増える", () => {
+      const { settings } = useBoardStore.getState();
+      useBoardStore.getState().updateSettings({
+        projectName: "P",
+        lanes: [
+          ...settings.lanes,
+          createLane({ id: "lane-6", name: "レビュー" }),
+        ],
+      });
+      expect(useBoardStore.getState().laneOrder["lane-6"]).toEqual([]);
+    });
+
+    it("既存アイテムのあるレーンの削除はエラーになる", () => {
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      const { settings } = useBoardStore.getState();
+      expect(() =>
+        useBoardStore.getState().updateSettings({
+          projectName: "P",
+          lanes: settings.lanes.filter((lane) => lane.id !== "lane-2"),
+        }),
+      ).toThrow(/削除できません/);
+    });
+
+    it("プロジェクト名が空の場合はエラーになる", () => {
+      const { settings } = useBoardStore.getState();
+      expect(() =>
+        useBoardStore
+          .getState()
+          .updateSettings({ projectName: "", lanes: settings.lanes }),
+      ).toThrow(/プロジェクト名/);
+    });
+
+    it("不正なレーン構成（投入先なし等）はエラーになる", () => {
+      expect(() =>
+        useBoardStore.getState().updateSettings({
+          projectName: "P",
+          lanes: [createLane({ id: "lane-1", name: "A" })],
+        }),
+      ).toThrow(/投入先/);
     });
   });
 
@@ -147,13 +208,13 @@ describe("boardStore", () => {
       expect(parent.comments).toEqual(["メモ"]);
     });
 
-    it("IDとステータスと子アイテム一覧は更新できない（他の経路で管理）", () => {
+    it("IDとレーンと子アイテム一覧は更新できない（他の経路で管理）", () => {
       const store = useBoardStore.getState();
       store.addParent({ summary: "設計する" });
       useBoardStore.getState().updateParent("P-1", { summary: "変更" });
       const parent = useBoardStore.getState().parents["P-1"];
       expect(parent.id).toBe("P-1");
-      expect(parent.status).toBe("ToDo");
+      expect(parent.laneId).toBe("lane-1");
     });
 
     it("不正なサイズを指定するとエラーになる", () => {
@@ -213,10 +274,10 @@ describe("boardStore", () => {
     it("レーンIDへのドロップでレーン間移動する", () => {
       const store = useBoardStore.getState();
       store.addParent({ summary: "A" });
-      useBoardStore.getState().handleDragEnd("P-1", "InProgress");
+      useBoardStore.getState().handleDragEnd("P-1", "lane-2");
       const state = useBoardStore.getState();
-      expect(state.parents["P-1"].status).toBe("InProgress");
-      expect(state.laneOrder.InProgress).toEqual(["P-1"]);
+      expect(state.parents["P-1"].laneId).toBe("lane-2");
+      expect(state.laneOrder["lane-2"]).toEqual(["P-1"]);
     });
 
     it("同一レーンのアイテムへのドロップで並び替える", () => {
@@ -224,18 +285,21 @@ describe("boardStore", () => {
       store.addParent({ summary: "A" });
       useBoardStore.getState().addParent({ summary: "B" });
       useBoardStore.getState().handleDragEnd("P-1", "P-2");
-      expect(useBoardStore.getState().laneOrder.ToDo).toEqual(["P-2", "P-1"]);
+      expect(useBoardStore.getState().laneOrder["lane-1"]).toEqual([
+        "P-2",
+        "P-1",
+      ]);
     });
 
     it("別レーンのアイテムへのドロップでその位置に移動する", () => {
       const store = useBoardStore.getState();
       store.addParent({ summary: "A" });
       useBoardStore.getState().addParent({ summary: "B" });
-      useBoardStore.getState().moveItem("P-2", "InProgress");
+      useBoardStore.getState().moveItem("P-2", "lane-2");
       useBoardStore.getState().handleDragEnd("P-1", "P-2");
       const state = useBoardStore.getState();
-      expect(state.parents["P-1"].status).toBe("InProgress");
-      expect(state.laneOrder.InProgress).toEqual(["P-1", "P-2"]);
+      expect(state.parents["P-1"].laneId).toBe("lane-2");
+      expect(state.laneOrder["lane-2"]).toEqual(["P-1", "P-2"]);
     });
 
     it("変更が不要な場合（自分自身へのドロップ等）は状態を変えない", () => {
@@ -247,79 +311,46 @@ describe("boardStore", () => {
     });
   });
 
-  describe("updateSettings", () => {
-    it("プロジェクト名とレーン設定を更新する", () => {
+  describe("dropItem（Drop = データ保持したまま進捗除外レーンへ）", () => {
+    it("アイテムをDrop先レーンに移動しデータは保持する", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "設計する" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      useBoardStore.getState().dropItem("P-1");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].laneId).toBe("lane-5");
+      expect(state.parents["P-1"].summary).toBe("設計する");
+      expect(state.laneOrder["lane-5"]).toEqual(["P-1"]);
+      expect(state.laneOrder["lane-2"]).toEqual([]);
+    });
+
+    it("Drop先レーンがない場合はエラーになる", () => {
       useBoardStore.getState().updateSettings({
-        projectName: "新プロジェクト",
-        lanes: [
-          { status: "ToDo", displayName: "やること" },
-          { status: "Done", displayName: "おわり" },
-        ],
+        projectName: "P",
+        lanes: [createLane({ id: "lane-1", name: "A", isDefaultEntry: true })],
       });
-      const { settings } = useBoardStore.getState();
-      expect(settings.projectName).toBe("新プロジェクト");
-      expect(settings.lanes).toEqual([
-        { status: "ToDo", displayName: "やること" },
-        { status: "Done", displayName: "おわり" },
-      ]);
-    });
-
-    it("プロジェクト名が空の場合はエラーになる", () => {
-      expect(() =>
-        useBoardStore.getState().updateSettings({
-          projectName: "",
-          lanes: [{ status: "ToDo", displayName: "やること" }],
-        }),
-      ).toThrow(/プロジェクト名/);
-    });
-
-    it("レーンが0件の場合はエラーになる", () => {
-      expect(() =>
-        useBoardStore
-          .getState()
-          .updateSettings({ projectName: "P", lanes: [] }),
-      ).toThrow(/レーン/);
-    });
-
-    it("ステータスが重複する場合はエラーになる", () => {
-      expect(() =>
-        useBoardStore.getState().updateSettings({
-          projectName: "P",
-          lanes: [
-            { status: "ToDo", displayName: "A" },
-            { status: "ToDo", displayName: "B" },
-          ],
-        }),
-      ).toThrow(/重複/);
-    });
-
-    it("レーン名が空の場合はエラーになる", () => {
-      expect(() =>
-        useBoardStore.getState().updateSettings({
-          projectName: "P",
-          lanes: [{ status: "ToDo", displayName: "" }],
-        }),
-      ).toThrow(/レーン名/);
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      expect(() => useBoardStore.getState().dropItem("P-1")).toThrow(/Drop先/);
     });
   });
 
   describe("exportMarkdown", () => {
-    it("現在のボードをマークダウンとして出力する（レーン順）", () => {
+    it("現在のボードをマークダウンとして出力する（レーン順・レーン名表記）", () => {
       const store = useBoardStore.getState();
       store.addParent({ summary: "設計する", size: 5 });
       useBoardStore.getState().addParent({ summary: "実装する" });
       useBoardStore
         .getState()
         .addChild({ parentId: "P-1", description: "図を描く" });
-      useBoardStore.getState().moveItem("P-2", "InProgress");
+      useBoardStore.getState().moveItem("P-2", "lane-2");
       const md = useBoardStore.getState().exportMarkdown();
       expect(md).toContain("# 札帖");
       expect(md).toContain("## P-1: 設計する");
       expect(md).toContain("- サイズ: 5");
       expect(md).toContain("## P-2: 実装する");
-      expect(md).toContain("- ステータス: InProgress");
+      expect(md).toContain("- レーン: 作業中");
       expect(md).toContain("- [ ] C-1: 図を描く");
-      // レーン順: ToDoのP-1が先、作業中のP-2が後
+      // レーン順: 未着手のP-1が先、作業中のP-2が後
       expect(md.indexOf("## P-1")).toBeLessThan(md.indexOf("## P-2"));
     });
   });
@@ -328,7 +359,7 @@ describe("boardStore", () => {
     const md = `# 輸入プロジェクト
 
 ## P-1: 設計する
-- ステータス: InProgress
+- レーン: 作業中
 - サイズ: 5
 
 ### 子アイテム
@@ -345,10 +376,10 @@ describe("boardStore", () => {
       expect(state.parents["P-1"].summary).toBe("設計する");
       expect(state.parents["P-1"].childIds).toEqual(["C-1", "C-2"]);
       expect(state.parents["P-3"].summary).toBe("実装する");
-      expect(state.children["C-1"].status).toBe("Done");
-      expect(state.laneOrder.InProgress).toEqual(["P-1"]);
-      expect(state.laneOrder.Done).toEqual(["C-1"]);
-      expect(state.laneOrder.ToDo).toEqual(["C-2", "P-3"]);
+      expect(state.children["C-1"].laneId).toBe("lane-3");
+      expect(state.laneOrder["lane-2"]).toEqual(["P-1"]);
+      expect(state.laneOrder["lane-3"]).toEqual(["C-1"]);
+      expect(state.laneOrder["lane-1"]).toEqual(["C-2", "P-3"]);
     });
 
     it("インポート前のアイテムは置き換えられる", () => {
@@ -394,27 +425,13 @@ describe("boardStore", () => {
       useBoardStore
         .getState()
         .addChild({ parentId: "P-1", description: "図を描く" });
-      useBoardStore.getState().moveItem("C-1", "Done");
+      useBoardStore.getState().moveItem("C-1", "lane-3");
       const exported = useBoardStore.getState().exportMarkdown();
       useBoardStore.getState().importMarkdown(exported);
       const state = useBoardStore.getState();
       expect(state.parents["P-1"].size).toBe(8);
-      expect(state.children["C-1"].status).toBe("Done");
+      expect(state.children["C-1"].laneId).toBe("lane-3");
       expect(state.exportMarkdown()).toBe(exported);
-    });
-  });
-
-  describe("dropItem（Drop = データ保持したままDroppedへ）", () => {
-    it("アイテムをDroppedレーンに移動しデータは保持する", () => {
-      const store = useBoardStore.getState();
-      store.addParent({ summary: "設計する" });
-      useBoardStore.getState().moveItem("P-1", "InProgress");
-      useBoardStore.getState().dropItem("P-1");
-      const state = useBoardStore.getState();
-      expect(state.parents["P-1"].status).toBe("Dropped");
-      expect(state.parents["P-1"].summary).toBe("設計する");
-      expect(state.laneOrder.Dropped).toEqual(["P-1"]);
-      expect(state.laneOrder.InProgress).toEqual([]);
     });
   });
 });

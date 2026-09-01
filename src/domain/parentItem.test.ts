@@ -26,16 +26,24 @@ describe("isValidSize", () => {
 });
 
 describe("createParentItem", () => {
-  it("必須項目（ID・概要）を指定して作成できる", () => {
-    const item = createParentItem({ id: "P-1", summary: "設計する" });
+  it("必須項目（ID・概要・レーンID）を指定して作成できる", () => {
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+    });
     expect(item.id).toBe("P-1");
     expect(item.summary).toBe("設計する");
+    expect(item.laneId).toBe("lane-1");
   });
 
-  it("デフォルト値が設定される（サイズ0, ステータスToDo, 空の文字列フィールドと空配列）", () => {
-    const item = createParentItem({ id: "P-1", summary: "設計する" });
+  it("デフォルト値が設定される（サイズ0, 空の文字列フィールドと空配列）", () => {
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+    });
     expect(item.size).toBe(0);
-    expect(item.status).toBe("ToDo");
     expect(item.assignee).toBe("");
     expect(item.reason).toBe("");
     expect(item.schedule).toBe("");
@@ -48,8 +56,8 @@ describe("createParentItem", () => {
     const item = createParentItem({
       id: "P-2",
       summary: "実装する",
+      laneId: "lane-2",
       size: 8,
-      status: "InProgress",
       assignee: "野村",
       reason: "リリースに必要",
       schedule: "2026-09-30",
@@ -58,7 +66,7 @@ describe("createParentItem", () => {
       childIds: ["C-1", "C-2"],
     });
     expect(item.size).toBe(8);
-    expect(item.status).toBe("InProgress");
+    expect(item.laneId).toBe("lane-2");
     expect(item.assignee).toBe("野村");
     expect(item.reason).toBe("リリースに必要");
     expect(item.schedule).toBe("2026-09-30");
@@ -71,6 +79,7 @@ describe("createParentItem", () => {
     const item = createParentItem({
       id: "P-3",
       summary: "無限タスク",
+      laneId: "lane-1",
       size: INFINITY_SIZE,
     });
     expect(item.size).toBe(INFINITY_SIZE);
@@ -78,11 +87,24 @@ describe("createParentItem", () => {
 
   it("フィボナッチ数列にないサイズを指定するとエラーになる", () => {
     expect(() =>
-      createParentItem({ id: "P-4", summary: "不正", size: 4 as never }),
+      createParentItem({
+        id: "P-4",
+        summary: "不正",
+        laneId: "lane-1",
+        size: 4 as never,
+      }),
     ).toThrow(/サイズ/);
   });
 
   it("IDが空文字の場合はエラーになる", () => {
-    expect(() => createParentItem({ id: "", summary: "概要" })).toThrow(/ID/);
+    expect(() =>
+      createParentItem({ id: "", summary: "概要", laneId: "lane-1" }),
+    ).toThrow(/ID/);
+  });
+
+  it("レーンIDが空文字の場合はエラーになる", () => {
+    expect(() =>
+      createParentItem({ id: "P-1", summary: "概要", laneId: "" }),
+    ).toThrow(/レーンID/);
   });
 });

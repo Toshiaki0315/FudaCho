@@ -4,12 +4,15 @@ import type { ChildItemPatch } from "../store/boardStore";
 
 interface ChildItemDetailProps {
   item: ChildItem;
+  /** 現在所属するレーンの表示名（読み取り専用。移動はD&Dで行う） */
+  laneName: string;
   onSave: (patch: ChildItemPatch) => void;
   onClose: () => void;
 }
 
 export function ChildItemDetail({
   item,
+  laneName,
   onSave,
   onClose,
 }: ChildItemDetailProps) {
@@ -45,7 +48,7 @@ export function ChildItemDetail({
         <header className="item-detail-header">
           <span className="item-id">{item.id}</span>
           <span className="item-parent-id">親: {item.parentId}</span>
-          <span className="item-status">{item.status}</span>
+          <span className="item-status">{laneName}</span>
         </header>
         <label>
           作業内容

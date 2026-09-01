@@ -5,35 +5,35 @@ import {
   type CreateChildItemInput,
 } from "../domain/childItem";
 import {
+  findDefaultEntryLane,
+  findDropLane,
+  validateLanes,
+} from "../domain/lane";
+import { changeLane } from "../domain/laneChange";
+import {
   createEmptyLaneOrder,
   insertIntoLane,
   moveToLane,
   reorderWithinLane,
   type LaneOrder,
 } from "../domain/laneOrder";
+import { generateMarkdown, parseMarkdown } from "../domain/markdown";
 import {
   createParentItem,
   type CreateParentItemInput,
   type ParentItem,
 } from "../domain/parentItem";
-import { generateMarkdown, parseMarkdown } from "../domain/markdown";
-import {
-  ALL_STATUSES,
-  createDefaultSettings,
-  type Settings,
-  type Status,
-} from "../domain/settings";
-import { changeStatus } from "../domain/statusChange";
+import { createDefaultSettings, type Settings } from "../domain/settings";
 import { resolveDragEnd } from "../components/dnd";
 
-type AddParentInput = Omit<CreateParentItemInput, "id">;
-type AddChildInput = Omit<CreateChildItemInput, "id">;
-/** 詳細ビューから編集できるフィールド。ID・ステータス・親子関係は対象外。 */
+type AddParentInput = Omit<CreateParentItemInput, "id" | "laneId">;
+type AddChildInput = Omit<CreateChildItemInput, "id" | "laneId">;
+/** 詳細ビューから編集できるフィールド。ID・レーン・親子関係は対象外。 */
 export type ParentItemPatch = Partial<
-  Omit<ParentItem, "id" | "status" | "childIds">
+  Omit<ParentItem, "id" | "laneId" | "childIds">
 >;
 export type ChildItemPatch = Partial<
-  Omit<ChildItem, "id" | "status" | "parentId">
+  Omit<ChildItem, "id" | "laneId" | "parentId">
 >;
 
 interface BoardState {
@@ -44,12 +44,12 @@ interface BoardState {
   nextParentNumber: number;
   nextChildNumber: number;
   addParent: (input: AddParentInput) => string;
-  addChild: (input: AddChildInput) => string;
+  addChild: (input: AddChildInput & { parentId: string }) => string;
   updateSettings: (settings: Settings) => void;
   updateParent: (itemId: string, patch: ParentItemPatch) => void;
   updateChild: (itemId: string, patch: ChildItemPatch) => void;
-  moveItem: (itemId: string, toStatus: Status, index?: number) => void;
-  reorderLane: (status: Status, fromIndex: number, toIndex: number) => void;
+  moveItem: (itemId: string, toLaneId: string, index?: number) => void;
+  reorderLane: (laneId: string, fromIndex: number, toIndex: number) => void;
   handleDragEnd: (activeId: string, overId: string | null) => void;
   dropItem: (itemId: string) => void;
   exportMarkdown: () => string;
@@ -58,11 +58,12 @@ interface BoardState {
 }
 
 function initialState() {
+  const settings = createDefaultSettings();
   return {
-    settings: createDefaultSettings(),
+    settings,
     parents: {} as Record<string, ParentItem>,
     children: {} as Record<string, ChildItem>,
-    laneOrder: createEmptyLaneOrder(),
+    laneOrder: createEmptyLaneOrder(settings.lanes.map((lane) => lane.id)),
     nextParentNumber: 1,
     nextChildNumber: 1,
   };
@@ -72,11 +73,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   ...initialState(),
 
   addParent(input) {
+    const entryLane = findDefaultEntryLane(get().settings.lanes);
     const id = `P-${get().nextParentNumber}`;
-    const parent = createParentItem({ ...input, id });
+    const parent = createParentItem({ ...input, id, laneId: entryLane.id });
     set((state) => ({
       parents: { ...state.parents, [id]: parent },
-      laneOrder: insertIntoLane(state.laneOrder, parent.status, id),
+      laneOrder: insertIntoLane(state.laneOrder, parent.laneId, id),
       nextParentNumber: state.nextParentNumber + 1,
     }));
     return id;
@@ -87,15 +89,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (!parent) {
       throw new Error(`親アイテム ${input.parentId} が見つかりません`);
     }
+    const entryLane = findDefaultEntryLane(get().settings.lanes);
     const id = `C-${get().nextChildNumber}`;
-    const child = createChildItem({ ...input, id });
+    const child = createChildItem({ ...input, id, laneId: entryLane.id });
     set((state) => ({
       children: { ...state.children, [id]: child },
       parents: {
         ...state.parents,
         [parent.id]: { ...parent, childIds: [...parent.childIds, id] },
       },
-      laneOrder: insertIntoLane(state.laneOrder, child.status, id),
+      laneOrder: insertIntoLane(state.laneOrder, child.laneId, id),
       nextChildNumber: state.nextChildNumber + 1,
     }));
     return id;
@@ -105,17 +108,21 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (settings.projectName === "") {
       throw new Error("プロジェクト名は必須です");
     }
-    if (settings.lanes.length === 0) {
-      throw new Error("レーンは1件以上必要です");
+    validateLanes(settings.lanes);
+    const { laneOrder } = get();
+    const newLaneIds = new Set(settings.lanes.map((lane) => lane.id));
+    for (const laneId of Object.keys(laneOrder)) {
+      if (!newLaneIds.has(laneId) && laneOrder[laneId].length > 0) {
+        throw new Error(
+          `アイテムが残っているレーンは削除できません（レーン: ${laneId}）`,
+        );
+      }
     }
-    const statuses = settings.lanes.map((lane) => lane.status);
-    if (new Set(statuses).size !== statuses.length) {
-      throw new Error("レーンのステータスが重複しています");
+    const nextOrder: LaneOrder = {};
+    for (const lane of settings.lanes) {
+      nextOrder[lane.id] = laneOrder[lane.id] ?? [];
     }
-    if (settings.lanes.some((lane) => lane.displayName === "")) {
-      throw new Error("レーン名は必須です");
-    }
-    set({ settings });
+    set({ settings, laneOrder: nextOrder });
   },
 
   updateParent(itemId, patch) {
@@ -128,7 +135,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       ...current,
       ...patch,
       id: current.id,
-      status: current.status,
+      laneId: current.laneId,
       childIds: current.childIds,
     });
     set((state) => ({ parents: { ...state.parents, [itemId]: updated } }));
@@ -143,25 +150,25 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       ...current,
       ...patch,
       id: current.id,
-      status: current.status,
+      laneId: current.laneId,
       parentId: current.parentId,
     });
     set((state) => ({ children: { ...state.children, [itemId]: updated } }));
   },
 
-  moveItem(itemId, toStatus, index) {
+  moveItem(itemId, toLaneId, index) {
     const { parents, children } = get();
     if (!parents[itemId] && !children[itemId]) {
       throw new Error(`アイテム ${itemId} が見つかりません`);
     }
     set((state) => {
-      const laneOrder = moveToLane(state.laneOrder, itemId, toStatus, index);
+      const laneOrder = moveToLane(state.laneOrder, itemId, toLaneId, index);
       if (state.parents[itemId]) {
         return {
           laneOrder,
           parents: {
             ...state.parents,
-            [itemId]: changeStatus(state.parents[itemId], toStatus),
+            [itemId]: changeLane(state.parents[itemId], toLaneId),
           },
         };
       }
@@ -169,15 +176,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         laneOrder,
         children: {
           ...state.children,
-          [itemId]: changeStatus(state.children[itemId], toStatus),
+          [itemId]: changeLane(state.children[itemId], toLaneId),
         },
       };
     });
   },
 
-  reorderLane(status, fromIndex, toIndex) {
+  reorderLane(laneId, fromIndex, toIndex) {
     set((state) => ({
-      laneOrder: reorderWithinLane(state.laneOrder, status, fromIndex, toIndex),
+      laneOrder: reorderWithinLane(state.laneOrder, laneId, fromIndex, toIndex),
     }));
   },
 
@@ -187,46 +194,54 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       return;
     }
     if (action.type === "move") {
-      get().moveItem(activeId, action.toStatus, action.index);
+      get().moveItem(activeId, action.toLaneId, action.index);
     } else {
-      get().reorderLane(action.status, action.fromIndex, action.toIndex);
+      get().reorderLane(action.laneId, action.fromIndex, action.toIndex);
     }
   },
 
   dropItem(itemId) {
-    get().moveItem(itemId, "Dropped");
+    const dropLane = findDropLane(get().settings.lanes);
+    if (dropLane === null) {
+      throw new Error("Drop先（進捗除外）のレーンがありません");
+    }
+    get().moveItem(itemId, dropLane.id);
   },
 
   exportMarkdown() {
     const { settings, parents, children, laneOrder } = get();
-    const orderedParents = ALL_STATUSES.flatMap((status) =>
-      laneOrder[status]
+    const orderedParents = settings.lanes.flatMap((lane) =>
+      laneOrder[lane.id]
         .filter((id) => parents[id] !== undefined)
         .map((id) => parents[id]),
     );
     const orderedChildren = orderedParents.flatMap((parent) =>
       parent.childIds.map((childId) => children[childId]),
     );
-    return generateMarkdown({
-      projectName: settings.projectName,
-      parents: orderedParents,
-      children: orderedChildren,
-    });
+    return generateMarkdown(
+      {
+        projectName: settings.projectName,
+        parents: orderedParents,
+        children: orderedChildren,
+      },
+      settings.lanes,
+    );
   },
 
   importMarkdown(markdown) {
-    const snapshot = parseMarkdown(markdown);
+    const { settings } = get();
+    const snapshot = parseMarkdown(markdown, settings.lanes);
     const parents: Record<string, ParentItem> = {};
     const children: Record<string, ChildItem> = {};
-    let laneOrder = createEmptyLaneOrder();
+    let laneOrder = createEmptyLaneOrder(settings.lanes.map((l) => l.id));
     const childrenById = new Map(snapshot.children.map((c) => [c.id, c]));
     for (const parent of snapshot.parents) {
       parents[parent.id] = parent;
-      laneOrder = insertIntoLane(laneOrder, parent.status, parent.id);
+      laneOrder = insertIntoLane(laneOrder, parent.laneId, parent.id);
       for (const childId of parent.childIds) {
         const child = childrenById.get(childId)!;
         children[childId] = child;
-        laneOrder = insertIntoLane(laneOrder, child.status, childId);
+        laneOrder = insertIntoLane(laneOrder, child.laneId, childId);
       }
     }
     const maxNumber = (ids: string[], prefix: string) =>

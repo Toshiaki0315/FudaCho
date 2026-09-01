@@ -1,5 +1,3 @@
-import type { Status } from "./settings";
-
 export const INFINITY_SIZE = "♾️" as const;
 
 export const FIBONACCI_SIZES = [0, 1, 2, 3, 5, 8, 13, INFINITY_SIZE] as const;
@@ -10,7 +8,7 @@ export interface ParentItem {
   id: string;
   summary: string;
   size: Size;
-  status: Status;
+  laneId: string;
   assignee: string;
   reason: string;
   schedule: string;
@@ -26,8 +24,8 @@ export function isValidSize(value: unknown): value is Size {
 export interface CreateParentItemInput {
   id: string;
   summary: string;
+  laneId: string;
   size?: Size;
-  status?: Status;
   assignee?: string;
   reason?: string;
   schedule?: string;
@@ -40,6 +38,9 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
   if (input.id === "") {
     throw new Error("IDは必須です");
   }
+  if (input.laneId === "") {
+    throw new Error("レーンIDは必須です");
+  }
   const size = input.size ?? 0;
   if (!isValidSize(size)) {
     throw new Error(
@@ -50,7 +51,7 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
     id: input.id,
     summary: input.summary,
     size,
-    status: input.status ?? "ToDo",
+    laneId: input.laneId,
     assignee: input.assignee ?? "",
     reason: input.reason ?? "",
     schedule: input.schedule ?? "",
