@@ -268,9 +268,7 @@ describe("BoardView", () => {
       seedLabeledBoard();
       render(<BoardView />);
       await user.click(screen.getAllByRole("button", { name: "設計" })[0]);
-      expect(
-        screen.getByText(/ラベル「設計」で絞り込み中/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/ラベルで絞り込み中/)).toBeInTheDocument();
       // 設計ラベルを持つ親とその子だけが表示される
       expect(screen.getByText("設計タスク")).toBeInTheDocument();
       expect(screen.getByText("図を描く")).toBeInTheDocument();
@@ -288,44 +286,75 @@ describe("BoardView", () => {
       expect(screen.queryByText("設計タスク")).not.toBeInTheDocument();
     });
 
-    it("同じラベルをもう一度クリックすると絞り込みが解除される", async () => {
+    it("複数ラベルのAND絞り込みと個別解除ができる", async () => {
       const user = userEvent.setup();
-      seedLabeledBoard();
+      // 1: A,B / 2: なし / 3: B / 4: A
+      useBoardStore
+        .getState()
+        .addParent({ summary: "アイテム1", labels: ["A", "B"] });
+      useBoardStore.getState().addParent({ summary: "アイテム2" });
+      useBoardStore
+        .getState()
+        .addParent({ summary: "アイテム3", labels: ["B"] });
+      useBoardStore
+        .getState()
+        .addParent({ summary: "アイテム4", labels: ["A"] });
       render(<BoardView />);
-      await user.click(screen.getAllByRole("button", { name: "設計" })[0]);
-      expect(
-        screen.getByText(/ラベル「設計」で絞り込み中/),
-      ).toBeInTheDocument();
-      await user.click(screen.getAllByRole("button", { name: "設計" })[0]);
+      const board = screen.getByRole("region", { name: "未着手" });
+      const visible = () =>
+        within(board)
+          .queryAllByRole("article")
+          .map((c) => c.textContent);
+
+      // Aで絞り込み → 1と4が残る
+      await user.click(within(board).getAllByRole("button", { name: "A" })[0]);
+      expect(visible().join()).toContain("アイテム1");
+      expect(visible().join()).toContain("アイテム4");
+      expect(visible()).toHaveLength(2);
+
+      // さらにBで絞り込み（AND） → 1だけになる
+      await user.click(within(board).getAllByRole("button", { name: "B" })[0]);
+      expect(visible()).toHaveLength(1);
+      expect(visible().join()).toContain("アイテム1");
+
+      // Bを解除（カード上のチップを再クリック） → Aの絞り込みは有効なまま1と4
+      await user.click(within(board).getAllByRole("button", { name: "B" })[0]);
+      expect(visible()).toHaveLength(2);
+
+      // Aを解除 → 全部表示
+      await user.click(within(board).getAllByRole("button", { name: "A" })[0]);
+      expect(visible()).toHaveLength(4);
       expect(screen.queryByText(/絞り込み中/)).not.toBeInTheDocument();
-      expect(screen.getByText("別のタスク")).toBeInTheDocument();
     });
 
-    it("絞り込み中に別のラベルをクリックするとそのラベルに切り替わる", async () => {
+    it("絞り込みバーのラベルチップをクリックしてもそのラベルだけ解除できる", async () => {
       const user = userEvent.setup();
       useBoardStore
         .getState()
-        .addParent({ summary: "設計タスク", labels: ["設計", "急ぎ"] });
+        .addParent({ summary: "アイテム1", labels: ["A", "B"] });
       useBoardStore
         .getState()
-        .addParent({ summary: "急ぎタスク", labels: ["急ぎ"] });
+        .addParent({ summary: "アイテム4", labels: ["A"] });
       render(<BoardView />);
-      await user.click(screen.getByRole("button", { name: "設計" }));
-      expect(screen.queryByText("急ぎタスク")).not.toBeInTheDocument();
-      // 表示中のカードにある別ラベル「急ぎ」をクリック → 絞り込みが切り替わる
-      await user.click(screen.getByRole("button", { name: "急ぎ" }));
-      expect(
-        screen.getByText(/ラベル「急ぎ」で絞り込み中/),
-      ).toBeInTheDocument();
-      expect(screen.getByText("急ぎタスク")).toBeInTheDocument();
+      const board = screen.getByRole("region", { name: "未着手" });
+      await user.click(within(board).getAllByRole("button", { name: "A" })[0]);
+      await user.click(within(board).getByRole("button", { name: "B" }));
+      const bar = screen.getByText(/ラベルで絞り込み中/).parentElement!;
+      await user.click(
+        within(bar).getByRole("button", {
+          name: "ラベル「B」の絞り込みを解除",
+        }),
+      );
+      expect(within(board).queryAllByRole("article")).toHaveLength(2);
+      expect(screen.getByText(/ラベルで絞り込み中/)).toBeInTheDocument();
     });
 
-    it("「解除」で絞り込みが解除され全アイテムが表示される", async () => {
+    it("「すべて解除」で絞り込みが解除され全アイテムが表示される", async () => {
       const user = userEvent.setup();
       seedLabeledBoard();
       render(<BoardView />);
       await user.click(screen.getAllByRole("button", { name: "設計" })[0]);
-      await user.click(screen.getByRole("button", { name: "解除" }));
+      await user.click(screen.getByRole("button", { name: "すべて解除" }));
       expect(screen.queryByText(/絞り込み中/)).not.toBeInTheDocument();
       expect(screen.getByText("別のタスク")).toBeInTheDocument();
       expect(screen.getByText("独自ラベル作業")).toBeInTheDocument();

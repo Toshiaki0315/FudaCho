@@ -58,12 +58,15 @@ export function BoardView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // ドラッグ中のアイテムID。DragOverlayに複製カードを表示するために保持する
   const [activeId, setActiveId] = useState<string | null>(null);
-  // ラベル絞り込み（カードのラベルチップをクリックで設定）
-  const [labelFilter, setLabelFilter] = useState<string | null>(null);
+  // ラベル絞り込み（AND条件）。カードのラベルチップをクリックで追加/解除する
+  const [labelFilters, setLabelFilters] = useState<string[]>([]);
 
-  // 同じラベルをもう一度クリックしたら絞り込みを解除、別のラベルなら切り替える
   const toggleLabelFilter = (label: string) => {
-    setLabelFilter((current) => (current === label ? null : label));
+    setLabelFilters((current) =>
+      current.includes(label)
+        ? current.filter((l) => l !== label)
+        : [...current, label],
+    );
   };
 
   // 通知は数秒後に自動で消える
@@ -93,14 +96,12 @@ export function BoardView() {
   };
 
   const matchesFilter = (itemId: string) => {
-    if (labelFilter === null) {
+    if (labelFilters.length === 0) {
       return true;
     }
     const parent = parents[itemId];
-    if (parent) {
-      return parent.labels.includes(labelFilter);
-    }
-    return effectiveLabelsOf(itemId).includes(labelFilter);
+    const itemLabels = parent ? parent.labels : effectiveLabelsOf(itemId);
+    return labelFilters.every((label) => itemLabels.includes(label));
   };
 
   const renderCard = (itemId: string, lane: Lane) => {
@@ -185,11 +186,22 @@ export function BoardView() {
         applyDragEnd(event);
       }}
     >
-      {labelFilter !== null && (
+      {labelFilters.length > 0 && (
         <div className="label-filter-bar">
-          <span>ラベル「{labelFilter}」で絞り込み中</span>
-          <button type="button" onClick={() => setLabelFilter(null)}>
-            解除
+          <span>ラベルで絞り込み中:</span>
+          {labelFilters.map((label) => (
+            <button
+              key={label}
+              type="button"
+              className="label-chip"
+              aria-label={`ラベル「${label}」の絞り込みを解除`}
+              onClick={() => toggleLabelFilter(label)}
+            >
+              {label} ✕
+            </button>
+          ))}
+          <button type="button" onClick={() => setLabelFilters([])}>
+            すべて解除
           </button>
         </div>
       )}
