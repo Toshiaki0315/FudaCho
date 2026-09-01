@@ -28,22 +28,18 @@ describe("SettingsDialog", () => {
     expect(within(rows[0]).getByRole("textbox")).toHaveValue("未着手");
   });
 
-  it("投入先レーンにはバッジが表示される", () => {
+  it("投入先レーンには削除ボタンの代わりに「投入先」バッジが表示される", () => {
     renderDialog();
     const rows = screen.getAllByRole("listitem");
     expect(within(rows[0]).getByText("投入先")).toBeInTheDocument();
+    expect(
+      within(rows[0]).queryByRole("button", { name: "削除" }),
+    ).not.toBeInTheDocument();
+    // 投入先以外のレーンには削除ボタンがあり、バッジはない
     expect(within(rows[1]).queryByText("投入先")).not.toBeInTheDocument();
-  });
-
-  it("バッジのスロットは全行に存在し、投入先以外は空白でボタン位置が揃う", () => {
-    const { container } = renderDialog();
-    const slots = container.querySelectorAll(".settings-lane-tag");
-    expect(slots).toHaveLength(5);
-    expect(slots[0]).toHaveTextContent("投入先");
-    for (const slot of Array.from(slots).slice(1)) {
-      expect(slot).toHaveTextContent("");
-      expect(slot).toHaveAttribute("aria-hidden", "true");
-    }
+    expect(
+      within(rows[1]).getByRole("button", { name: "削除" }),
+    ).toBeInTheDocument();
   });
 
   it("プロジェクト名とレーン名を変更して保存できる（IDは不変）", async () => {

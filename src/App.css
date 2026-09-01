@@ -508,18 +508,18 @@ body {
   border-radius: 6px;
 }
 
+/* 削除ボタンの位置に置くため、ボタンと同等の寸法にそろえる */
 .settings-lane-tag {
-  flex: 0 0 48px;
-  font-size: 11px;
-  text-align: center;
-  padding: 2px 0;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  padding: 5px 6px;
   white-space: nowrap;
-}
-
-.settings-lane-tag.is-entry {
   color: #0969da;
   background-color: #ddf4ff;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .settings-lane-row .settings-wip-input {

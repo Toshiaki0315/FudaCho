@@ -97,16 +97,6 @@ export function SettingsDialog({
                   value={lane.wipLimit ?? ""}
                   onChange={(e) => setWipLimit(index, e.target.value)}
                 />
-                <span
-                  className={
-                    lane.isDefaultEntry
-                      ? "settings-lane-tag is-entry"
-                      : "settings-lane-tag"
-                  }
-                  aria-hidden={!lane.isDefaultEntry}
-                >
-                  {lane.isDefaultEntry ? "投入先" : ""}
-                </span>
                 <button
                   type="button"
                   disabled={index === 0}
@@ -121,9 +111,14 @@ export function SettingsDialog({
                 >
                   下へ
                 </button>
-                <button type="button" onClick={() => removeLane(index)}>
-                  削除
-                </button>
+                {lane.isDefaultEntry ? (
+                  // 投入先レーンは削除できないため、削除ボタンの位置にバッジを表示する
+                  <span className="settings-lane-tag">投入先</span>
+                ) : (
+                  <button type="button" onClick={() => removeLane(index)}>
+                    削除
+                  </button>
+                )}
               </li>
             ))}
           </ul>
