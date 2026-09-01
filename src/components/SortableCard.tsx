@@ -8,12 +8,18 @@ interface SortableCardProps {
 }
 
 export function SortableCard({ id, children }: SortableCardProps) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
   return (
     <div
       ref={setNodeRef}
-      className="sortable-card"
+      className={isDragging ? "sortable-card dragging" : "sortable-card"}
       style={{ transform: CSS.Transform.toString(transform), transition }}
       {...attributes}
       {...listeners}

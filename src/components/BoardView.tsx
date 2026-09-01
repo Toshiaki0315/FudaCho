@@ -1,5 +1,6 @@
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useDroppable,
@@ -52,6 +53,8 @@ export function BoardView() {
   const updateChild = useBoardStore((state) => state.updateChild);
   const dropItem = useBoardStore((state) => state.dropItem);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // ドラッグ中のアイテムID。DragOverlayに複製カードを表示するために保持する
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   // アイテムのあるレーンは削除できない（updateSettingsが保証）ため、レーンは必ず見つかる
   const laneNameOf = (laneId: string) =>
@@ -114,14 +117,43 @@ export function BoardView() {
   const selectedChild = selectedId ? children[selectedId] : undefined;
   const closeDetail = () => setSelectedId(null);
 
+  // ドラッグ中にポインタへ追従させる複製カード（Dropボタン等の操作は含めない）
+  const overlayCard = (itemId: string) => {
+    const parent = parents[itemId];
+    return parent ? (
+      <ParentItemCard
+        item={parent}
+        children_={parent.childIds.map((childId) => children[childId])}
+        lanes={settings.lanes}
+      />
+    ) : (
+      <ChildItemCard item={children[itemId]} />
+    );
+  };
+
+  const applyDragEnd = composeDragHandler(handleDragEnd);
+
   return (
-    <DndContext sensors={sensors} onDragEnd={composeDragHandler(handleDragEnd)}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={(event) => setActiveId(String(event.active.id))}
+      onDragCancel={() => setActiveId(null)}
+      onDragEnd={(event) => {
+        setActiveId(null);
+        applyDragEnd(event);
+      }}
+    >
       <KanbanBoard
         lanes={settings.lanes}
         laneContent={laneContent}
         laneCounts={laneCounts}
         onAddItem={() => addParent({ summary: "新規アイテム" })}
       />
+      <DragOverlay dropAnimation={null}>
+        {activeId !== null && (
+          <div className="drag-overlay-card">{overlayCard(activeId)}</div>
+        )}
+      </DragOverlay>
       {selectedParent && (
         <ParentItemDetail
           item={selectedParent}

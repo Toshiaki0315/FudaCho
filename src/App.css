@@ -101,6 +101,20 @@ body {
   cursor: grab;
 }
 
+/* ドラッグ中の元カードは半透明のプレースホルダとして残す（複製はDragOverlayが表示） */
+.sortable-card.dragging {
+  opacity: 0.35;
+}
+
+.drag-overlay-card {
+  cursor: grabbing;
+}
+
+.drag-overlay-card .item-card {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  transform: rotate(2deg);
+}
+
 .item-card {
   background-color: #ffffff;
   border-radius: 6px;

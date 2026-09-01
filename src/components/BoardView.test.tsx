@@ -193,4 +193,41 @@ describe("BoardView", () => {
     const card = within(todoLane).getByRole("article");
     expect(card.closest("[aria-roledescription='sortable']")).not.toBeNull();
   });
+
+  it("ドラッグ中はオーバーレイに複製が表示され、元のカードはプレースホルダになる", async () => {
+    const user = userEvent.setup();
+    const parentId = useBoardStore
+      .getState()
+      .addParent({ summary: "設計する" });
+    useBoardStore.getState().addChild({ parentId, description: "作業" });
+    const { container } = render(<BoardView />);
+    const sortable = container.querySelector<HTMLElement>(
+      "[aria-roledescription='sortable']",
+    )!;
+    sortable.focus();
+    await user.keyboard(" ");
+    // オーバーレイの複製 + 元カード（プレースホルダ）の2枚が存在する
+    expect(screen.getAllByText("設計する")).toHaveLength(2);
+    expect(sortable.className).toContain("dragging");
+    // Escapeでキャンセルすると1枚に戻る
+    await user.keyboard("{Escape}");
+    expect(screen.getAllByText("設計する")).toHaveLength(1);
+    expect(sortable.className).not.toContain("dragging");
+  });
+
+  it("キーボード操作でドラッグを完了するとオーバーレイが消える", async () => {
+    const user = userEvent.setup();
+    const parentId = useBoardStore.getState().addParent({ summary: "設計" });
+    useBoardStore.getState().addChild({ parentId, description: "図を描く" });
+    const { container } = render(<BoardView />);
+    const sortables = container.querySelectorAll<HTMLElement>(
+      "[aria-roledescription='sortable']",
+    );
+    // 子アイテムのカードでドラッグ開始→そのままドロップ
+    sortables[1].focus();
+    await user.keyboard(" ");
+    expect(screen.getAllByText("図を描く")).toHaveLength(2);
+    await user.keyboard(" ");
+    expect(screen.getAllByText("図を描く")).toHaveLength(1);
+  });
 });
