@@ -65,7 +65,7 @@ describe("BoardView", () => {
     });
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
-      "親アイテムはCloseまたはDropレーンへのみ移動できます",
+      "親アイテムはPBL・Close・Dropレーンへのみ移動できます",
     );
     await user.click(within(alert).getByRole("button", { name: "閉じる" }));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();

@@ -211,8 +211,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       return null;
     }
     if (parent) {
-      if (toLane.role !== "close" && toLane.role !== "drop") {
-        return "親アイテムはCloseまたはDropレーンへのみ移動できます";
+      // PBLへの移動はClose/Dropからの復帰。それ以外の中間レーンには置けない
+      if (
+        toLane.role !== "close" &&
+        toLane.role !== "drop" &&
+        toLane.role !== "pbl"
+      ) {
+        return "親アイテムはPBL・Close・Dropレーンへのみ移動できます";
       }
       if (toLane.role === "close") {
         const laneRoleById = new Map(
@@ -278,6 +283,14 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       return;
     }
     if (action.type === "move") {
+      // 親アイテムのDropレーンへのD&Dは、コンテキストメニューのDropと同じく子へ波及させる
+      const toLane = get().settings.lanes.find(
+        (lane) => lane.id === action.toLaneId,
+      );
+      if (get().parents[activeId] && toLane?.role === "drop") {
+        get().dropItem(activeId);
+        return;
+      }
       // 移動できないD&Dは適用せず、理由を通知する（ドラッグ操作を失敗にしない）
       const reason = get().moveBlockReason(activeId, action.toLaneId);
       if (reason !== null) {
@@ -319,6 +332,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     for (const id of targets) {
       get().moveItem(id, dropLane.id);
     }
+    set({ notice: null });
   },
 
   deleteItem(itemId) {

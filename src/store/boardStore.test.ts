@@ -69,16 +69,31 @@ describe("boardStore", () => {
   });
 
   describe("移動制限", () => {
-    it("親アイテムはCloseとDropへのみ移動できる", () => {
+    it("親アイテムはPBL・Close・Drop以外へは移動できない", () => {
       useBoardStore.getState().addParent({ summary: "A" });
       expect(() => useBoardStore.getState().moveItem("P-1", "lane-2")).toThrow(
-        /CloseまたはDrop/,
+        /PBL・Close・Drop/,
       );
       expect(() => useBoardStore.getState().moveItem("P-1", "lane-3")).toThrow(
-        /CloseまたはDrop/,
+        /PBL・Close・Drop/,
       );
       useBoardStore.getState().moveItem("P-1", "lane-5");
       expect(useBoardStore.getState().parents["P-1"].laneId).toBe("lane-5");
+    });
+
+    it("Closeした親アイテムはPBLへ戻せる", () => {
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().moveItem("P-1", "lane-4");
+      useBoardStore.getState().moveItem("P-1", "lane-1");
+      expect(useBoardStore.getState().parents["P-1"].laneId).toBe("lane-1");
+      expect(useBoardStore.getState().laneOrder["lane-1"]).toEqual(["P-1"]);
+    });
+
+    it("Dropした親アイテムはPBLへ戻せる", () => {
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().dropItem("P-1");
+      useBoardStore.getState().moveItem("P-1", "lane-1");
+      expect(useBoardStore.getState().parents["P-1"].laneId).toBe("lane-1");
     });
 
     it("未完了の子アイテムがある親はCloseできない", () => {
@@ -133,7 +148,7 @@ describe("boardStore", () => {
     it("移動が成功すると通知は消える", () => {
       useBoardStore.getState().addParent({ summary: "A" });
       useBoardStore.getState().handleDragEnd("P-1", "lane-2");
-      expect(useBoardStore.getState().notice).toMatch(/CloseまたはDrop/);
+      expect(useBoardStore.getState().notice).toMatch(/PBL・Close・Drop/);
       useBoardStore.getState().handleDragEnd("P-1", "lane-5");
       expect(useBoardStore.getState().notice).toBeNull();
       expect(useBoardStore.getState().parents["P-1"].laneId).toBe("lane-5");
@@ -175,6 +190,16 @@ describe("boardStore", () => {
       expect(() =>
         useBoardStore.getState().moveItem("C-1", "lane-3", 0),
       ).not.toThrow();
+    });
+
+    it("D&Dで子アイテムを別レーンへ移動でき、成功すると通知は消える", () => {
+      useBoardStore.getState().addChild({ description: "A" });
+      useBoardStore.getState().handleDragEnd("C-1", "lane-1");
+      expect(useBoardStore.getState().notice).not.toBeNull();
+      useBoardStore.getState().handleDragEnd("C-1", "lane-3");
+      const state = useBoardStore.getState();
+      expect(state.children["C-1"].laneId).toBe("lane-3");
+      expect(state.notice).toBeNull();
     });
 
     it("D&DでWIP制限に達したレーンへ移動すると通知され、移動は行われない", () => {
@@ -347,6 +372,44 @@ describe("boardStore", () => {
       const before = useBoardStore.getState().laneOrder;
       useBoardStore.getState().dropItem("P-1");
       expect(useBoardStore.getState().laneOrder).toEqual(before);
+    });
+
+    it("D&Dで親アイテムをDropレーンへ移動すると子アイテムもすべてDropされる", () => {
+      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      useBoardStore.getState().moveItem("C-2", "lane-3");
+      useBoardStore.getState().handleDragEnd("P-1", "lane-5");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].laneId).toBe("lane-5");
+      expect(state.children["C-1"].laneId).toBe("lane-5");
+      expect(state.children["C-2"].laneId).toBe("lane-5");
+    });
+
+    it("D&Dの親Dropで子を含めるとWIP制限に収まらない場合は通知して何も移動しない", () => {
+      const { settings } = useBoardStore.getState();
+      useBoardStore.getState().updateSettings({
+        projectName: settings.projectName,
+        lanes: settings.lanes.map((lane) =>
+          lane.role === "drop" ? { ...lane, wipLimit: 2 } : lane,
+        ),
+      });
+      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      useBoardStore.getState().handleDragEnd("P-1", "lane-5");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].laneId).toBe("lane-1");
+      expect(state.laneOrder["lane-5"]).toEqual([]);
+      expect(state.notice).toMatch(/WIP制限/);
+    });
+
+    it("Dropに成功すると通知は消える", () => {
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().handleDragEnd("P-1", "lane-2");
+      expect(useBoardStore.getState().notice).not.toBeNull();
+      useBoardStore.getState().dropItem("P-1");
+      expect(useBoardStore.getState().notice).toBeNull();
     });
 
     it("Drop先レーンのWIP制限に収まらない場合は通知して何も移動しない", () => {
