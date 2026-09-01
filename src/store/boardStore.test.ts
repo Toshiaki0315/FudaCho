@@ -124,6 +124,91 @@ describe("boardStore", () => {
     });
   });
 
+  describe("updateParent", () => {
+    it("親アイテムのフィールドを更新する", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "設計する" });
+      useBoardStore.getState().updateParent("P-1", {
+        summary: "詳細設計する",
+        size: 5,
+        assignee: "野村",
+        reason: "重要",
+        schedule: "2026-09-15",
+        notes: "備考",
+        comments: ["メモ"],
+      });
+      const parent = useBoardStore.getState().parents["P-1"];
+      expect(parent.summary).toBe("詳細設計する");
+      expect(parent.size).toBe(5);
+      expect(parent.assignee).toBe("野村");
+      expect(parent.reason).toBe("重要");
+      expect(parent.schedule).toBe("2026-09-15");
+      expect(parent.notes).toBe("備考");
+      expect(parent.comments).toEqual(["メモ"]);
+    });
+
+    it("IDとステータスと子アイテム一覧は更新できない（他の経路で管理）", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "設計する" });
+      useBoardStore.getState().updateParent("P-1", { summary: "変更" });
+      const parent = useBoardStore.getState().parents["P-1"];
+      expect(parent.id).toBe("P-1");
+      expect(parent.status).toBe("ToDo");
+    });
+
+    it("不正なサイズを指定するとエラーになる", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "設計する" });
+      expect(() =>
+        useBoardStore.getState().updateParent("P-1", { size: 4 as never }),
+      ).toThrow(/サイズ/);
+    });
+
+    it("存在しないIDを更新するとエラーになる", () => {
+      expect(() =>
+        useBoardStore.getState().updateParent("P-99", { summary: "x" }),
+      ).toThrow(/P-99/);
+    });
+  });
+
+  describe("updateChild", () => {
+    it("子アイテムのフィールドを更新する", () => {
+      const store = useBoardStore.getState();
+      const parentId = store.addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業" });
+      useBoardStore.getState().updateChild("C-1", {
+        description: "作業を変更",
+        assignee: "野村",
+        estimatedHours: 4,
+        actualHours: 2.5,
+        startDate: "2026-09-01",
+        endDate: "2026-09-02",
+      });
+      const child = useBoardStore.getState().children["C-1"];
+      expect(child.description).toBe("作業を変更");
+      expect(child.assignee).toBe("野村");
+      expect(child.estimatedHours).toBe(4);
+      expect(child.actualHours).toBe(2.5);
+      expect(child.startDate).toBe("2026-09-01");
+      expect(child.endDate).toBe("2026-09-02");
+    });
+
+    it("負の見積時間を指定するとエラーになる", () => {
+      const store = useBoardStore.getState();
+      const parentId = store.addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業" });
+      expect(() =>
+        useBoardStore.getState().updateChild("C-1", { estimatedHours: -1 }),
+      ).toThrow(/見積時間/);
+    });
+
+    it("存在しないIDを更新するとエラーになる", () => {
+      expect(() =>
+        useBoardStore.getState().updateChild("C-99", { description: "x" }),
+      ).toThrow(/C-99/);
+    });
+  });
+
   describe("handleDragEnd（D&D結果の適用）", () => {
     it("レーンIDへのドロップでレーン間移動する", () => {
       const store = useBoardStore.getState();

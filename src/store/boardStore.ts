@@ -26,6 +26,13 @@ import { resolveDragEnd } from "../components/dnd";
 
 type AddParentInput = Omit<CreateParentItemInput, "id">;
 type AddChildInput = Omit<CreateChildItemInput, "id">;
+/** 詳細ビューから編集できるフィールド。ID・ステータス・親子関係は対象外。 */
+export type ParentItemPatch = Partial<
+  Omit<ParentItem, "id" | "status" | "childIds">
+>;
+export type ChildItemPatch = Partial<
+  Omit<ChildItem, "id" | "status" | "parentId">
+>;
 
 interface BoardState {
   settings: Settings;
@@ -36,6 +43,8 @@ interface BoardState {
   nextChildNumber: number;
   addParent: (input: AddParentInput) => string;
   addChild: (input: AddChildInput) => string;
+  updateParent: (itemId: string, patch: ParentItemPatch) => void;
+  updateChild: (itemId: string, patch: ChildItemPatch) => void;
   moveItem: (itemId: string, toStatus: Status, index?: number) => void;
   reorderLane: (status: Status, fromIndex: number, toIndex: number) => void;
   handleDragEnd: (activeId: string, overId: string | null) => void;
@@ -85,6 +94,37 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       nextChildNumber: state.nextChildNumber + 1,
     }));
     return id;
+  },
+
+  updateParent(itemId, patch) {
+    const current = get().parents[itemId];
+    if (!current) {
+      throw new Error(`親アイテム ${itemId} が見つかりません`);
+    }
+    // createParentItemを通してバリデーションを再適用する
+    const updated = createParentItem({
+      ...current,
+      ...patch,
+      id: current.id,
+      status: current.status,
+      childIds: current.childIds,
+    });
+    set((state) => ({ parents: { ...state.parents, [itemId]: updated } }));
+  },
+
+  updateChild(itemId, patch) {
+    const current = get().children[itemId];
+    if (!current) {
+      throw new Error(`子アイテム ${itemId} が見つかりません`);
+    }
+    const updated = createChildItem({
+      ...current,
+      ...patch,
+      id: current.id,
+      status: current.status,
+      parentId: current.parentId,
+    });
+    set((state) => ({ children: { ...state.children, [itemId]: updated } }));
   },
 
   moveItem(itemId, toStatus, index) {
