@@ -15,6 +15,28 @@ function child(id: string, laneId: string) {
   });
 }
 
+describe("childProgressCounts", () => {
+  it("完了数と総数（Dropped除外）を返す", async () => {
+    const { childProgressCounts } = await import("./progress");
+    const children = [
+      child("C-1", "lane-3"),
+      child("C-2", "lane-1"),
+      child("C-3", "lane-5"),
+      child("C-4", "lane-4"),
+    ];
+    // 完了扱い: lane-3, lane-4 / 進捗除外: lane-5
+    expect(childProgressCounts(children, lanes)).toEqual({
+      done: 2,
+      total: 3,
+    });
+  });
+
+  it("子アイテムがない場合は0/0を返す", async () => {
+    const { childProgressCounts } = await import("./progress");
+    expect(childProgressCounts([], lanes)).toEqual({ done: 0, total: 0 });
+  });
+});
+
 describe("calculateProgress", () => {
   it("子アイテムがない場合は0を返す", () => {
     expect(calculateProgress([], lanes)).toBe(0);

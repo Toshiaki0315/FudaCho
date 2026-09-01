@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useBoardStore } from "../store/boardStore";
@@ -358,6 +358,66 @@ describe("BoardView", () => {
       expect(screen.queryByText(/絞り込み中/)).not.toBeInTheDocument();
       expect(screen.getByText("別のタスク")).toBeInTheDocument();
       expect(screen.getByText("独自ラベル作業")).toBeInTheDocument();
+    });
+  });
+
+  describe("右クリックメニュー", () => {
+    it("カードを右クリックするとDropメニューが表示され、Dropで中断レーンへ移動する", async () => {
+      const user = userEvent.setup();
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      const menu = screen.getByRole("menu");
+      await user.click(within(menu).getByRole("menuitem", { name: "Drop" }));
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      const state = useBoardStore.getState();
+      // 親をDropすると子もすべてDropされる
+      expect(state.parents["P-1"].laneId).toBe("lane-5");
+      expect(state.children["C-1"].laneId).toBe("lane-5");
+    });
+
+    it("子アイテムをDropすると親カードの子カウント表示が更新される", async () => {
+      const user = userEvent.setup();
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      render(<BoardView />);
+      expect(screen.getByText("子 0 / 2")).toBeInTheDocument();
+      fireEvent.contextMenu(screen.getByText("作業1"));
+      await user.click(screen.getByRole("menuitem", { name: "Drop" }));
+      expect(screen.getByText("子 0 / 1")).toBeInTheDocument();
+      expect(useBoardStore.getState().children["C-1"].laneId).toBe("lane-5");
+    });
+
+    it("メニューの外側をクリックするとメニューが閉じる", async () => {
+      const user = userEvent.setup();
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+      await user.click(screen.getByLabelText("メニューを閉じる"));
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
+
+    it("メニューの外側を右クリックしてもメニューが閉じる", () => {
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      fireEvent.contextMenu(screen.getByLabelText("メニューを閉じる"));
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
+
+    it("Drop済みのアイテムではDropメニューが無効になる", () => {
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      useBoardStore.getState().dropItem("P-1");
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      expect(screen.getByRole("menuitem", { name: "Drop" })).toBeDisabled();
     });
   });
 

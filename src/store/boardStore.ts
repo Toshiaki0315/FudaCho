@@ -269,11 +269,33 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   dropItem(itemId) {
-    const dropLane = findDropLane(get().settings.lanes);
+    const { settings, parents, children, laneOrder } = get();
+    const dropLane = findDropLane(settings.lanes);
     if (dropLane === null) {
-      throw new Error("Drop先（進捗除外）のレーンがありません");
+      set({ notice: "Drop先（進捗除外）のレーンがありません" });
+      return;
     }
-    get().moveItem(itemId, dropLane.id);
+    // 親アイテムのDropは子アイテムにも波及する（Drop済みのものは除く）
+    const candidateIds = [itemId, ...(parents[itemId]?.childIds ?? [])];
+    const targets = candidateIds.filter((id) => {
+      const item = parents[id] ?? children[id];
+      return item.laneId !== dropLane.id;
+    });
+    if (targets.length === 0) {
+      return;
+    }
+    if (
+      dropLane.wipLimit !== null &&
+      laneOrder[dropLane.id].length + targets.length > dropLane.wipLimit
+    ) {
+      set({
+        notice: `レーン「${dropLane.name}」はWIP制限（${dropLane.wipLimit}）に達しているため移動できません`,
+      });
+      return;
+    }
+    for (const id of targets) {
+      get().moveItem(id, dropLane.id);
+    }
   },
 
   exportMarkdown() {

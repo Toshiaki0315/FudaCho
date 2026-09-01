@@ -60,6 +60,12 @@ export function BoardView() {
   const [activeId, setActiveId] = useState<string | null>(null);
   // ラベル絞り込み（AND条件）。カードのラベルチップをクリックで追加/解除する
   const [labelFilters, setLabelFilters] = useState<string[]>([]);
+  // 右クリックで開くコンテキストメニュー
+  const [contextMenu, setContextMenu] = useState<{
+    itemId: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const toggleLabelFilter = (label: string) => {
     setLabelFilters((current) =>
@@ -121,7 +127,13 @@ export function BoardView() {
       />
     );
     return (
-      <div onDoubleClick={() => setSelectedId(itemId)}>
+      <div
+        onDoubleClick={() => setSelectedId(itemId)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setContextMenu({ itemId, x: e.clientX, y: e.clientY });
+        }}
+      >
         {card}
         {lane.hasDropAction && (
           <button
@@ -216,6 +228,40 @@ export function BoardView() {
           <div className="drag-overlay-card">{overlayCard(activeId)}</div>
         )}
       </DragOverlay>
+      {contextMenu !== null && (
+        <>
+          <div
+            className="context-menu-backdrop"
+            aria-label="メニューを閉じる"
+            onClick={() => setContextMenu(null)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              setContextMenu(null);
+            }}
+          />
+          <div
+            role="menu"
+            className="context-menu"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              type="button"
+              role="menuitem"
+              disabled={
+                dropLane === null ||
+                (parents[contextMenu.itemId] ?? children[contextMenu.itemId])
+                  .laneId === dropLane.id
+              }
+              onClick={() => {
+                dropItem(contextMenu.itemId);
+                setContextMenu(null);
+              }}
+            >
+              Drop
+            </button>
+          </div>
+        </>
+      )}
       {notice !== null && (
         <div role="alert" className="board-notice">
           <span>{notice}</span>

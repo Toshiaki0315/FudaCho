@@ -62,6 +62,35 @@ describe("ParentItemCard", () => {
     expect(screen.getByText("33%")).toBeInTheDocument();
   });
 
+  it("子アイテムを持つ場合は「完了数 / 総数」を表示する", () => {
+    const children = [child("C-1", "lane-3"), child("C-2", "lane-1")];
+    render(
+      <ParentItemCard
+        item={parent(["C-1", "C-2"])}
+        children_={children}
+        lanes={lanes}
+      />,
+    );
+    expect(screen.getByText("子 1 / 2")).toBeInTheDocument();
+  });
+
+  it("Droppedの子は総数から除外して表示する", () => {
+    const children = [child("C-1", "lane-5"), child("C-2", "lane-1")];
+    render(
+      <ParentItemCard
+        item={parent(["C-1", "C-2"])}
+        children_={children}
+        lanes={lanes}
+      />,
+    );
+    expect(screen.getByText("子 0 / 1")).toBeInTheDocument();
+  });
+
+  it("子アイテムを持たない場合は子カウントを表示しない", () => {
+    render(<ParentItemCard item={parent()} children_={[]} lanes={lanes} />);
+    expect(screen.queryByText(/^子 /)).not.toBeInTheDocument();
+  });
+
   it("親アイテムであることを示すバッジを表示する（子カードとの視覚的区別）", () => {
     render(<ParentItemCard item={parent()} children_={[]} lanes={lanes} />);
     const badge = screen.getByLabelText("親アイテム");

@@ -1,7 +1,7 @@
 import type { ChildItem } from "../domain/childItem";
 import type { Lane } from "../domain/lane";
 import type { ParentItem } from "../domain/parentItem";
-import { calculateProgress } from "../domain/progress";
+import { calculateProgress, childProgressCounts } from "../domain/progress";
 import { LabelChips } from "./LabelChips";
 
 interface ParentItemCardProps {
@@ -20,6 +20,7 @@ export function ParentItemCard({
   onLabelClick,
 }: ParentItemCardProps) {
   const percent = Math.round(calculateProgress(children_, lanes) * 100);
+  const { done, total } = childProgressCounts(children_, lanes);
   return (
     <article className="item-card parent-item-card">
       <span className="item-badge" role="img" aria-label="親アイテム">
@@ -29,7 +30,14 @@ export function ParentItemCard({
       <p className="item-summary">{item.summary}</p>
       <LabelChips labels={item.labels} onLabelClick={onLabelClick} />
       <progress max={100} value={percent} />
-      <span className="item-progress">{percent}%</span>
+      <span className="item-progress">
+        {percent}%
+        {item.childIds.length > 0 && (
+          <span className="item-child-count">
+            子 {done} / {total}
+          </span>
+        )}
+      </span>
     </article>
   );
 }

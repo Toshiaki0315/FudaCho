@@ -417,13 +417,68 @@ describe("boardStore", () => {
       expect(state.laneOrder["lane-2"]).toEqual([]);
     });
 
-    it("Drop先レーンがない場合はエラーになる", () => {
+    it("親アイテムをDropすると子アイテムもすべてDropされる", () => {
+      const store = useBoardStore.getState();
+      const parentId = store.addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      useBoardStore.getState().moveItem("C-2", "lane-3");
+      useBoardStore.getState().dropItem("P-1");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].laneId).toBe("lane-5");
+      expect(state.children["C-1"].laneId).toBe("lane-5");
+      expect(state.children["C-2"].laneId).toBe("lane-5");
+      expect(state.laneOrder["lane-5"]).toEqual(["P-1", "C-1", "C-2"]);
+    });
+
+    it("既にDrop済みの子アイテムはそのまま（二重移動しない）", () => {
+      const store = useBoardStore.getState();
+      const parentId = store.addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().dropItem("C-1");
+      useBoardStore.getState().dropItem("P-1");
+      const state = useBoardStore.getState();
+      expect(state.laneOrder["lane-5"]).toEqual(["C-1", "P-1"]);
+    });
+
+    it("Drop済みアイテムを再度Dropしても何も起きない", () => {
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      useBoardStore.getState().dropItem("P-1");
+      const before = useBoardStore.getState().laneOrder;
+      useBoardStore.getState().dropItem("P-1");
+      expect(useBoardStore.getState().laneOrder).toEqual(before);
+    });
+
+    it("Drop先レーンのWIP制限に収まらない場合は通知して何も移動しない", () => {
+      const { settings } = useBoardStore.getState();
+      useBoardStore.getState().updateSettings({
+        projectName: settings.projectName,
+        lanes: settings.lanes.map((lane) =>
+          lane.id === "lane-5" ? { ...lane, wipLimit: 2 } : lane,
+        ),
+      });
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      useBoardStore.getState().dropItem("P-1");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].laneId).toBe("lane-1");
+      expect(state.laneOrder["lane-5"]).toEqual([]);
+      expect(state.notice).toMatch(/WIP制限/);
+    });
+
+    it("Drop先レーンがない場合は通知して何もしない", () => {
       useBoardStore.getState().updateSettings({
         projectName: "P",
         lanes: [createLane({ id: "lane-1", name: "A", isDefaultEntry: true })],
       });
       useBoardStore.getState().addParent({ summary: "設計する" });
-      expect(() => useBoardStore.getState().dropItem("P-1")).toThrow(/Drop先/);
+      useBoardStore.getState().dropItem("P-1");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].laneId).toBe("lane-1");
+      expect(state.notice).toMatch(/Drop先/);
     });
   });
 
