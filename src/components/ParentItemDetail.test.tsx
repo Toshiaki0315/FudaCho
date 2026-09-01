@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { createParentItem } from "../domain/parentItem";
@@ -45,7 +45,6 @@ describe("ParentItemDetail", () => {
     expect(screen.getByLabelText("開始予定日")).toHaveValue("2026-09-01");
     expect(screen.getByLabelText("終了予定日")).toHaveValue("2026-09-30");
     expect(screen.getByLabelText("備考")).toHaveValue("備考メモ");
-    expect(screen.getByLabelText("コメント")).toHaveValue("最初のコメント");
   });
 
   it("所属レーン名は読み取り専用で表示される（移動はD&Dで行う）", () => {
@@ -108,16 +107,57 @@ describe("ParentItemDetail", () => {
     );
   });
 
-  it("コメントは1行1件として保存される", async () => {
+  it("既存のコメントが一覧表示される", () => {
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+      comments: ["一つ目", "二つ目"],
+    });
+    renderDetail({ item });
+    const list = screen.getByRole("list", { name: "コメント" });
+    const rows = within(list).getAllByRole("listitem");
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("一つ目");
+    expect(rows[1]).toHaveTextContent("二つ目");
+  });
+
+  it("コメントを何件でも追加でき、入力欄は追加のたびにクリアされる", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+    const input = screen.getByLabelText("新しいコメント");
+    await user.type(input, "追加コメント1");
+    await user.click(screen.getByRole("button", { name: "コメントを追加" }));
+    expect(input).toHaveValue("");
+    await user.type(input, "追加コメント2");
+    await user.click(screen.getByRole("button", { name: "コメントを追加" }));
+    const list = screen.getByRole("list", { name: "コメント" });
+    const rows = within(list).getAllByRole("listitem");
+    // 既存1件 + 追加2件
+    expect(rows).toHaveLength(3);
+    expect(rows[1]).toHaveTextContent("追加コメント1");
+    expect(rows[2]).toHaveTextContent("追加コメント2");
+  });
+
+  it("空のコメントは追加できない", async () => {
+    const user = userEvent.setup();
+    renderDetail();
+    await user.click(screen.getByRole("button", { name: "コメントを追加" }));
+    const list = screen.getByRole("list", { name: "コメント" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("追加したコメントは保存時にすべて渡される", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
     renderDetail({ onSave });
-    const comments = screen.getByLabelText("コメント");
-    await user.clear(comments);
-    await user.type(comments, "一つ目{enter}二つ目");
+    await user.type(screen.getByLabelText("新しいコメント"), "レビュー済み");
+    await user.click(screen.getByRole("button", { name: "コメントを追加" }));
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ comments: ["一つ目", "二つ目"] }),
+      expect.objectContaining({
+        comments: ["最初のコメント", "レビュー済み"],
+      }),
     );
   });
 

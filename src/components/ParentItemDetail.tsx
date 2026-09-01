@@ -31,7 +31,17 @@ export function ParentItemDetail({
   );
   const [plannedEndDate, setPlannedEndDate] = useState(item.plannedEndDate);
   const [notes, setNotes] = useState(item.notes);
-  const [commentsText, setCommentsText] = useState(item.comments.join("\n"));
+  const [comments, setComments] = useState(item.comments);
+  const [newComment, setNewComment] = useState("");
+
+  const addComment = () => {
+    const trimmed = newComment.trim();
+    if (trimmed === "") {
+      return;
+    }
+    setComments([...comments, trimmed]);
+    setNewComment("");
+  };
 
   const handleSave = () => {
     onSave({
@@ -42,10 +52,7 @@ export function ParentItemDetail({
       plannedStartDate,
       plannedEndDate,
       notes,
-      comments: commentsText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line !== ""),
+      comments,
     });
   };
 
@@ -109,13 +116,30 @@ export function ParentItemDetail({
           備考
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
-        <label>
-          コメント
-          <textarea
-            value={commentsText}
-            onChange={(e) => setCommentsText(e.target.value)}
-          />
-        </label>
+        <section className="comments-section">
+          <p className="comments-title">コメント</p>
+          {comments.length > 0 && (
+            <ul className="comments-list" aria-label="コメント">
+              {comments.map((comment, index) => (
+                <li key={index}>{comment}</li>
+              ))}
+            </ul>
+          )}
+          <label>
+            新しいコメント
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="add-comment-button"
+            onClick={addComment}
+          >
+            コメントを追加
+          </button>
+        </section>
         <footer className="item-detail-footer">
           {onAddChild && (
             <button type="button" onClick={onAddChild}>
