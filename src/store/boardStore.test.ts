@@ -247,6 +247,107 @@ describe("boardStore", () => {
     });
   });
 
+  describe("exportMarkdown", () => {
+    it("現在のボードをマークダウンとして出力する（レーン順）", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "設計する", size: 5 });
+      useBoardStore.getState().addParent({ summary: "実装する" });
+      useBoardStore
+        .getState()
+        .addChild({ parentId: "P-1", description: "図を描く" });
+      useBoardStore.getState().moveItem("P-2", "InProgress");
+      const md = useBoardStore.getState().exportMarkdown();
+      expect(md).toContain("# 札帖");
+      expect(md).toContain("## P-1: 設計する");
+      expect(md).toContain("- サイズ: 5");
+      expect(md).toContain("## P-2: 実装する");
+      expect(md).toContain("- ステータス: InProgress");
+      expect(md).toContain("- [ ] C-1: 図を描く");
+      // レーン順: ToDoのP-1が先、作業中のP-2が後
+      expect(md.indexOf("## P-1")).toBeLessThan(md.indexOf("## P-2"));
+    });
+  });
+
+  describe("importMarkdown", () => {
+    const md = `# 輸入プロジェクト
+
+## P-1: 設計する
+- ステータス: InProgress
+- サイズ: 5
+
+### 子アイテム
+- [x] C-1: 図を描く
+- [ ] C-2: レビュー
+
+## P-3: 実装する
+`;
+
+    it("マークダウンからボード全体を再構築する", () => {
+      useBoardStore.getState().importMarkdown(md);
+      const state = useBoardStore.getState();
+      expect(state.settings.projectName).toBe("輸入プロジェクト");
+      expect(state.parents["P-1"].summary).toBe("設計する");
+      expect(state.parents["P-1"].childIds).toEqual(["C-1", "C-2"]);
+      expect(state.parents["P-3"].summary).toBe("実装する");
+      expect(state.children["C-1"].status).toBe("Done");
+      expect(state.laneOrder.InProgress).toEqual(["P-1"]);
+      expect(state.laneOrder.Done).toEqual(["C-1"]);
+      expect(state.laneOrder.ToDo).toEqual(["C-2", "P-3"]);
+    });
+
+    it("インポート前のアイテムは置き換えられる", () => {
+      useBoardStore.getState().addParent({ summary: "古いアイテム" });
+      useBoardStore.getState().importMarkdown(md);
+      const state = useBoardStore.getState();
+      expect(Object.values(state.parents).map((p) => p.summary)).not.toContain(
+        "古いアイテム",
+      );
+    });
+
+    it("インポート後の採番は既存IDと重複しない", () => {
+      useBoardStore.getState().importMarkdown(md);
+      const newId = useBoardStore.getState().addParent({ summary: "新規" });
+      expect(newId).toBe("P-4");
+      const newChildId = useBoardStore
+        .getState()
+        .addChild({ parentId: "P-1", description: "追加作業" });
+      expect(newChildId).toBe("C-3");
+    });
+
+    it("P-n形式でないIDは採番カウンタに影響しない", () => {
+      useBoardStore.getState().importMarkdown(`# 自由ID
+
+## TASK-9: 自由な形式のID
+`);
+      expect(useBoardStore.getState().addParent({ summary: "新規" })).toBe(
+        "P-1",
+      );
+    });
+
+    it("不正なマークダウンはエラーになり状態は変わらない", () => {
+      useBoardStore.getState().addParent({ summary: "既存" });
+      expect(() =>
+        useBoardStore.getState().importMarkdown("見出しなし"),
+      ).toThrow(/プロジェクト名/);
+      expect(useBoardStore.getState().parents["P-1"].summary).toBe("既存");
+    });
+
+    it("エクスポートしたマークダウンを再インポートできる（ラウンドトリップ）", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "設計する", size: 8, assignee: "野村" });
+      useBoardStore
+        .getState()
+        .addChild({ parentId: "P-1", description: "図を描く" });
+      useBoardStore.getState().moveItem("C-1", "Done");
+      const exported = useBoardStore.getState().exportMarkdown();
+      useBoardStore.getState().importMarkdown(exported);
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].size).toBe(8);
+      expect(state.children["C-1"].status).toBe("Done");
+      expect(state.exportMarkdown()).toBe(exported);
+    });
+  });
+
   describe("dropItem（Drop = データ保持したままDroppedへ）", () => {
     it("アイテムをDroppedレーンに移動しデータは保持する", () => {
       const store = useBoardStore.getState();

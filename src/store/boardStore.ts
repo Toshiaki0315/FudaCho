@@ -16,7 +16,9 @@ import {
   type CreateParentItemInput,
   type ParentItem,
 } from "../domain/parentItem";
+import { generateMarkdown, parseMarkdown } from "../domain/markdown";
 import {
+  ALL_STATUSES,
   createDefaultSettings,
   type Settings,
   type Status,
@@ -49,6 +51,8 @@ interface BoardState {
   reorderLane: (status: Status, fromIndex: number, toIndex: number) => void;
   handleDragEnd: (activeId: string, overId: string | null) => void;
   dropItem: (itemId: string) => void;
+  exportMarkdown: () => string;
+  importMarkdown: (markdown: string) => void;
   reset: () => void;
 }
 
@@ -173,6 +177,53 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   dropItem(itemId) {
     get().moveItem(itemId, "Dropped");
+  },
+
+  exportMarkdown() {
+    const { settings, parents, children, laneOrder } = get();
+    const orderedParents = ALL_STATUSES.flatMap((status) =>
+      laneOrder[status]
+        .filter((id) => parents[id] !== undefined)
+        .map((id) => parents[id]),
+    );
+    const orderedChildren = orderedParents.flatMap((parent) =>
+      parent.childIds.map((childId) => children[childId]),
+    );
+    return generateMarkdown({
+      projectName: settings.projectName,
+      parents: orderedParents,
+      children: orderedChildren,
+    });
+  },
+
+  importMarkdown(markdown) {
+    const snapshot = parseMarkdown(markdown);
+    const parents: Record<string, ParentItem> = {};
+    const children: Record<string, ChildItem> = {};
+    let laneOrder = createEmptyLaneOrder();
+    const childrenById = new Map(snapshot.children.map((c) => [c.id, c]));
+    for (const parent of snapshot.parents) {
+      parents[parent.id] = parent;
+      laneOrder = insertIntoLane(laneOrder, parent.status, parent.id);
+      for (const childId of parent.childIds) {
+        const child = childrenById.get(childId)!;
+        children[childId] = child;
+        laneOrder = insertIntoLane(laneOrder, child.status, childId);
+      }
+    }
+    const maxNumber = (ids: string[], prefix: string) =>
+      ids.reduce((max, id) => {
+        const match = id.match(new RegExp(`^${prefix}-(\\d+)$`));
+        return match ? Math.max(max, Number(match[1])) : max;
+      }, 0);
+    set((state) => ({
+      settings: { ...state.settings, projectName: snapshot.projectName },
+      parents,
+      children,
+      laneOrder,
+      nextParentNumber: maxNumber(Object.keys(parents), "P") + 1,
+      nextChildNumber: maxNumber(Object.keys(children), "C") + 1,
+    }));
   },
 
   reset() {
