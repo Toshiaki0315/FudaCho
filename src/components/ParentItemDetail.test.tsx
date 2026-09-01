@@ -80,6 +80,27 @@ describe("ParentItemDetail", () => {
     );
   });
 
+  it("担当者・理由・日程・備考も編集して保存できる", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <ParentItemDetail item={buildItem()} onSave={onSave} onClose={vi.fn()} />,
+    );
+    await user.type(screen.getByLabelText("担当者"), "2");
+    await user.type(screen.getByLabelText("理由"), "！");
+    await user.type(screen.getByLabelText("日程"), "頃");
+    await user.type(screen.getByLabelText("備考"), "追記");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assignee: "野村2",
+        reason: "リリースに必要！",
+        schedule: "2026-09-30頃",
+        notes: "備考メモ追記",
+      }),
+    );
+  });
+
   it("サイズに♾️を選択して保存できる", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
