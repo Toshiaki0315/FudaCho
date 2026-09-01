@@ -13,10 +13,12 @@ export function ExportDialog({ markdown, onClose }: ExportDialogProps) {
         aria-label="マークダウンエクスポート"
         className="item-detail"
       >
-        <label>
-          エクスポート結果
-          <textarea readOnly value={markdown} className="markdown-textarea" />
-        </label>
+        <div className="item-detail-body">
+          <label>
+            エクスポート結果
+            <textarea readOnly value={markdown} className="markdown-textarea" />
+          </label>
+        </div>
         <footer className="item-detail-footer">
           <button
             type="button"
@@ -58,15 +60,17 @@ export function ImportDialog({ onImport, onClose }: ImportDialogProps) {
         aria-label="マークダウンインポート"
         className="item-detail"
       >
-        <label>
-          マークダウン
-          <textarea
-            value={markdown}
-            onChange={(e) => setMarkdown(e.target.value)}
-            className="markdown-textarea"
-          />
-        </label>
-        {error !== null && <p className="import-error">{error}</p>}
+        <div className="item-detail-body">
+          <label>
+            マークダウン
+            <textarea
+              value={markdown}
+              onChange={(e) => setMarkdown(e.target.value)}
+              className="markdown-textarea"
+            />
+          </label>
+          {error !== null && <p className="import-error">{error}</p>}
+        </div>
         <footer className="item-detail-footer">
           <button type="button" onClick={onClose}>
             キャンセル

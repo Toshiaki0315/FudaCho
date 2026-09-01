@@ -67,79 +67,87 @@ export function ParentItemDetail({
           <span className="item-id">{item.id}</span>
           <span className="item-status">{laneName}</span>
         </header>
-        <label>
-          概要
-          <input value={summary} onChange={(e) => setSummary(e.target.value)} />
-        </label>
-        <label>
-          サイズ
-          <select
-            value={String(size)}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setSize(raw === "♾️" ? "♾️" : (Number(raw) as Size));
-            }}
-          >
-            {FIBONACCI_SIZES.map((s) => (
-              <option key={String(s)} value={String(s)}>
-                {String(s)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          担当者
-          <input
-            value={assignee}
-            onChange={(e) => setAssignee(e.target.value)}
-          />
-        </label>
-        <label>
-          理由
-          <input value={reason} onChange={(e) => setReason(e.target.value)} />
-        </label>
-        <label>
-          開始予定日
-          <input
-            value={plannedStartDate}
-            onChange={(e) => setPlannedStartDate(e.target.value)}
-          />
-        </label>
-        <label>
-          終了予定日
-          <input
-            value={plannedEndDate}
-            onChange={(e) => setPlannedEndDate(e.target.value)}
-          />
-        </label>
-        <label>
-          備考
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
-        </label>
-        <section className="comments-section">
-          <p className="comments-title">コメント</p>
-          {comments.length > 0 && (
-            <ul className="comments-list" aria-label="コメント">
-              {comments.map((comment, index) => (
-                <li key={index}>{comment}</li>
-              ))}
-            </ul>
-          )}
+        <div className="item-detail-body">
           <label>
-            新しいコメント
-            <textarea
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+            概要
+            <input
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
             />
           </label>
-          <button
-            type="button"
-            className="add-comment-button"
-            onClick={addComment}
-          >
-            コメントを追加
-          </button>
-        </section>
+          <label>
+            サイズ
+            <select
+              value={String(size)}
+              onChange={(e) => {
+                const raw = e.target.value;
+                setSize(raw === "♾️" ? "♾️" : (Number(raw) as Size));
+              }}
+            >
+              {FIBONACCI_SIZES.map((s) => (
+                <option key={String(s)} value={String(s)}>
+                  {String(s)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            担当者
+            <input
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+            />
+          </label>
+          <label>
+            理由
+            <input value={reason} onChange={(e) => setReason(e.target.value)} />
+          </label>
+          <label>
+            開始予定日
+            <input
+              value={plannedStartDate}
+              onChange={(e) => setPlannedStartDate(e.target.value)}
+            />
+          </label>
+          <label>
+            終了予定日
+            <input
+              value={plannedEndDate}
+              onChange={(e) => setPlannedEndDate(e.target.value)}
+            />
+          </label>
+          <label>
+            備考
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </label>
+          <section className="comments-section">
+            <p className="comments-title">コメント</p>
+            {comments.length > 0 && (
+              <ul className="comments-list" aria-label="コメント">
+                {comments.map((comment, index) => (
+                  <li key={index}>{comment}</li>
+                ))}
+              </ul>
+            )}
+            <label>
+              新しいコメント
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="add-comment-button"
+              onClick={addComment}
+            >
+              コメントを追加
+            </button>
+          </section>
+        </div>
         <footer className="item-detail-footer">
           {onAddChild && (
             <button type="button" onClick={onAddChild}>

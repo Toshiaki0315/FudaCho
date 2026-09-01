@@ -66,59 +66,61 @@ export function SettingsDialog({
   return (
     <div className="modal-backdrop">
       <div role="dialog" aria-label="設定" className="item-detail">
-        <label>
-          プロジェクト名
-          <input
-            value={projectName}
-            onChange={(e) => setProjectName(e.target.value)}
-          />
-        </label>
-        <p className="settings-lanes-title">レーン</p>
-        <ul className="settings-lanes">
-          {lanes.map((lane, index) => (
-            <li key={lane.id} className="settings-lane-row">
-              <input
-                aria-label={`レーン名（${lane.id}）`}
-                value={lane.name}
-                onChange={(e) => renameLane(index, e.target.value)}
-              />
-              <input
-                type="number"
-                min={1}
-                max={99}
-                className="settings-wip-input"
-                placeholder="WIP"
-                aria-label={`WIP制限（${lane.id}）`}
-                value={lane.wipLimit ?? ""}
-                onChange={(e) => setWipLimit(index, e.target.value)}
-              />
-              {lane.isDefaultEntry && (
-                <span className="settings-lane-tag">投入先</span>
-              )}
-              <button
-                type="button"
-                disabled={index === 0}
-                onClick={() => moveLane(index, -1)}
-              >
-                上へ
-              </button>
-              <button
-                type="button"
-                disabled={index === lanes.length - 1}
-                onClick={() => moveLane(index, 1)}
-              >
-                下へ
-              </button>
-              <button type="button" onClick={() => removeLane(index)}>
-                削除
-              </button>
-            </li>
-          ))}
-        </ul>
-        <button type="button" onClick={addLane}>
-          ＋レーンを追加
-        </button>
-        {error !== null && <p className="import-error">{error}</p>}
+        <div className="item-detail-body">
+          <label>
+            プロジェクト名
+            <input
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+            />
+          </label>
+          <p className="settings-lanes-title">レーン</p>
+          <ul className="settings-lanes">
+            {lanes.map((lane, index) => (
+              <li key={lane.id} className="settings-lane-row">
+                <input
+                  aria-label={`レーン名（${lane.id}）`}
+                  value={lane.name}
+                  onChange={(e) => renameLane(index, e.target.value)}
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  className="settings-wip-input"
+                  placeholder="WIP"
+                  aria-label={`WIP制限（${lane.id}）`}
+                  value={lane.wipLimit ?? ""}
+                  onChange={(e) => setWipLimit(index, e.target.value)}
+                />
+                {lane.isDefaultEntry && (
+                  <span className="settings-lane-tag">投入先</span>
+                )}
+                <button
+                  type="button"
+                  disabled={index === 0}
+                  onClick={() => moveLane(index, -1)}
+                >
+                  上へ
+                </button>
+                <button
+                  type="button"
+                  disabled={index === lanes.length - 1}
+                  onClick={() => moveLane(index, 1)}
+                >
+                  下へ
+                </button>
+                <button type="button" onClick={() => removeLane(index)}>
+                  削除
+                </button>
+              </li>
+            ))}
+          </ul>
+          <button type="button" onClick={addLane}>
+            ＋レーンを追加
+          </button>
+          {error !== null && <p className="import-error">{error}</p>}
+        </div>
         <footer className="item-detail-footer">
           <button type="button" onClick={onClose}>
             キャンセル

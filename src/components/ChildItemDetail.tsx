@@ -50,52 +50,57 @@ export function ChildItemDetail({
           <span className="item-parent-id">親: {item.parentId}</span>
           <span className="item-status">{laneName}</span>
         </header>
-        <label>
-          作業内容
-          <textarea
-            rows={4}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-        </label>
-        <label>
-          担当者
-          <input
-            value={assignee}
-            onChange={(e) => setAssignee(e.target.value)}
-          />
-        </label>
-        <label>
-          見積時間
-          <input
-            type="number"
-            min={0}
-            step={0.5}
-            value={estimatedHours}
-            onChange={(e) => setEstimatedHours(e.target.value)}
-          />
-        </label>
-        <label>
-          実績時間
-          <input
-            type="number"
-            min={0}
-            step={0.5}
-            value={actualHours}
-            onChange={(e) => setActualHours(e.target.value)}
-          />
-        </label>
-        <label>
-          開始日
-          <input
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-        </label>
-        <label>
-          終了日
-          <input value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        </label>
+        <div className="item-detail-body">
+          <label>
+            作業内容
+            <textarea
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </label>
+          <label>
+            担当者
+            <input
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+            />
+          </label>
+          <label>
+            見積時間
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={estimatedHours}
+              onChange={(e) => setEstimatedHours(e.target.value)}
+            />
+          </label>
+          <label>
+            実績時間
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={actualHours}
+              onChange={(e) => setActualHours(e.target.value)}
+            />
+          </label>
+          <label>
+            開始日
+            <input
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </label>
+          <label>
+            終了日
+            <input
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </label>
+        </div>
         <footer className="item-detail-footer">
           <button type="button" onClick={onClose}>
             キャンセル
