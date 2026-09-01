@@ -564,6 +564,24 @@ describe("boardStore", () => {
       expect(useBoardStore.getState().children["C-1"].labels).toEqual([]);
     });
 
+    it("Ready導入前の保存データもhydrateで安全に読み込める（ready補完）", async () => {
+      const { selectPersisted } = await import("./boardStore");
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      const persisted = selectPersisted(useBoardStore.getState());
+      const legacyParent = { ...persisted.parents["P-1"] } as Record<
+        string,
+        unknown
+      >;
+      delete legacyParent.ready;
+      const legacy = {
+        ...persisted,
+        parents: { "P-1": legacyParent },
+      } as unknown as typeof persisted;
+      useBoardStore.getState().reset();
+      useBoardStore.getState().hydrate(legacy);
+      expect(useBoardStore.getState().parents["P-1"].ready).toBe(false);
+    });
+
     it("不正なレーン構成のhydrateはエラーになり状態は変わらない", async () => {
       const { selectPersisted } = await import("./boardStore");
       const persisted = selectPersisted(useBoardStore.getState());
@@ -614,6 +632,21 @@ describe("boardStore", () => {
 
     it("存在しないIDの削除はエラーになる", () => {
       expect(() => useBoardStore.getState().deleteItem("X-1")).toThrow(/X-1/);
+    });
+
+    it("Readyの親から最後の子を削除するとNot Readyに戻る", () => {
+      const store = useBoardStore.getState();
+      const parentId = store.addParent({
+        summary: "設計する",
+        reason: "リリースに必要",
+      });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      useBoardStore.getState().updateParent(parentId, { ready: true });
+      useBoardStore.getState().deleteItem("C-1");
+      expect(useBoardStore.getState().parents["P-1"].ready).toBe(true);
+      useBoardStore.getState().deleteItem("C-2");
+      expect(useBoardStore.getState().parents["P-1"].ready).toBe(false);
     });
   });
 

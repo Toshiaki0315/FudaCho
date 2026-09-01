@@ -155,6 +155,9 @@ export function generateMarkdown(
     if (parent.labels.length > 0) {
       lines.push(`- ラベル: ${parent.labels.join(";")}`);
     }
+    if (parent.ready) {
+      lines.push("- Ready: ✓");
+    }
     if (parent.comments.length > 0) {
       lines.push("- コメント:");
       for (const comment of parent.comments) {
@@ -351,6 +354,11 @@ export function parseMarkdown(
         parent.input.notes = value;
       } else if (key === "ラベル") {
         parent.input.labels = value.split(";");
+      } else if (key === "Ready") {
+        if (value !== "✓") {
+          throw new Error(`不正なReady値です: ${value}`);
+        }
+        parent.input.ready = true;
       } else if (key === "コメント") {
         parent.inComments = true;
       } else {

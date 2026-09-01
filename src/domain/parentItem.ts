@@ -31,6 +31,21 @@ export interface ParentItem {
   comments: string[];
   labels: string[];
   childIds: string[];
+  /** Ready = 着手可能。条件: 子アイテム1つ以上・概要と理由が記載済み */
+  ready: boolean;
+}
+
+/** Readyにできる条件を満たしているか。 */
+export function isReadyEligible(input: {
+  summary: string;
+  reason: string;
+  childIds: readonly string[];
+}): boolean {
+  return (
+    input.summary.trim() !== "" &&
+    input.reason.trim() !== "" &&
+    input.childIds.length > 0
+  );
 }
 
 export function isValidSize(value: unknown): value is Size {
@@ -50,6 +65,7 @@ export interface CreateParentItemInput {
   comments?: string[];
   labels?: string[];
   childIds?: string[];
+  ready?: boolean;
 }
 
 export function createParentItem(input: CreateParentItemInput): ParentItem {
@@ -62,6 +78,20 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
   const size = input.size ?? DEFAULT_SIZE;
   const labels = input.labels ?? [];
   validateLabels(labels);
+  const ready = input.ready ?? false;
+  const childIds = input.childIds ?? [];
+  if (
+    ready &&
+    !isReadyEligible({
+      summary: input.summary,
+      reason: input.reason ?? "",
+      childIds,
+    })
+  ) {
+    throw new Error(
+      "Readyにするには、子アイテムが1つ以上あり、概要と理由が記載されている必要があります",
+    );
+  }
   if (!isValidSize(size)) {
     throw new Error(
       `サイズはフィボナッチ数列 (${FIBONACCI_SIZES.join(", ")}) のみ指定できます`,
@@ -79,6 +109,7 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
     notes: input.notes ?? "",
     comments: input.comments ?? [],
     labels,
-    childIds: input.childIds ?? [],
+    childIds,
+    ready,
   };
 }

@@ -197,6 +197,60 @@ describe("ParentItemDetail", () => {
     );
   });
 
+  it("Readyチェックボックスがあり、条件を満たす場合はチェックして保存できる", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+      reason: "リリースに必要",
+      childIds: ["C-1"],
+    });
+    renderDetail({ item, onSave });
+    const checkbox = screen.getByRole("checkbox", { name: "Ready" });
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).not.toBeDisabled();
+    await user.click(checkbox);
+    expect(checkbox).toBeChecked();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ ready: true }),
+    );
+  });
+
+  it("子アイテムがない場合はReadyチェックボックスが無効で条件ヒントが表示される", () => {
+    // buildItemは子アイテムなし
+    renderDetail();
+    expect(screen.getByRole("checkbox", { name: "Ready" })).toBeDisabled();
+    expect(
+      screen.getByText(/子アイテムが1つ以上あり、概要と理由が記載されている/),
+    ).toBeInTheDocument();
+  });
+
+  it("理由を空にするとReadyは自動的に外れて無効になり、保存でもfalseになる", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+      reason: "リリースに必要",
+      childIds: ["C-1"],
+      ready: true,
+    });
+    renderDetail({ item, onSave });
+    expect(screen.getByRole("checkbox", { name: "Ready" })).toBeChecked();
+    await user.clear(screen.getByLabelText("理由"));
+    const checkbox = screen.getByRole("checkbox", { name: "Ready" });
+    expect(checkbox).not.toBeChecked();
+    expect(checkbox).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ ready: false }),
+    );
+  });
+
   it("キャンセルするとonCloseが呼ばれ、onSaveは呼ばれない", async () => {
     const onSave = vi.fn();
     const onClose = vi.fn();

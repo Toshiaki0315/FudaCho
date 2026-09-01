@@ -91,6 +91,30 @@ describe("ParentItemCard", () => {
     expect(screen.queryByText(/^子 /)).not.toBeInTheDocument();
   });
 
+  it("ReadyのアイテムにはReadyバッジが表示される", () => {
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+      reason: "理由",
+      childIds: ["C-1"],
+      ready: true,
+    });
+    render(
+      <ParentItemCard
+        item={item}
+        children_={[child("C-1", "lane-1")]}
+        lanes={lanes}
+      />,
+    );
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+  });
+
+  it("Not ReadyのアイテムにはReadyバッジが表示されない", () => {
+    render(<ParentItemCard item={parent()} children_={[]} lanes={lanes} />);
+    expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+  });
+
   it("親アイテムであることを示すバッジを表示する（子カードとの視覚的区別）", () => {
     render(<ParentItemCard item={parent()} children_={[]} lanes={lanes} />);
     const badge = screen.getByLabelText("親アイテム");

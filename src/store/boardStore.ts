@@ -101,7 +101,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     const parents = Object.fromEntries(
       Object.entries(persisted.parents).map(([id, parent]) => [
         id,
-        { ...parent, labels: parent.labels ?? [] },
+        {
+          ...parent,
+          labels: parent.labels ?? [],
+          ready: parent.ready ?? false,
+        },
       ]),
     );
     const children = Object.fromEntries(
@@ -320,9 +324,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       const child = state.children[itemId];
       if (child) {
         const parent = nextParents[child.parentId];
+        const childIds = parent.childIds.filter((id) => id !== itemId);
         nextParents[child.parentId] = {
           ...parent,
-          childIds: parent.childIds.filter((id) => id !== itemId),
+          childIds,
+          // 子がいなくなったらReady条件を満たさないため自動でNot Readyに戻す
+          ready: parent.ready && childIds.length > 0,
         };
       }
       return { parents: nextParents, children: nextChildren, laneOrder };

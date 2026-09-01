@@ -296,6 +296,41 @@ body {
   cursor: not-allowed;
 }
 
+.ready-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  color: #1a7f37;
+  background-color: #dafbe1;
+  border-radius: 8px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
+
+.ready-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-detail label.ready-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1f2328;
+}
+
+.ready-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.ready-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #8c959f;
+}
+
 .item-child-count {
   margin-left: 8px;
   color: #8c959f;

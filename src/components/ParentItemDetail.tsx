@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   FIBONACCI_SIZES,
+  isReadyEligible,
   type ParentItem,
   type Size,
 } from "../domain/parentItem";
@@ -53,6 +54,15 @@ export function ParentItemDetail({
 
   const [comments, setComments] = useState(item.comments);
   const [newComment, setNewComment] = useState("");
+  const [ready, setReady] = useState(item.ready);
+
+  // Ready条件（概要・理由は編集中の値で判定）。条件を満たさない場合は自動的にNot Readyになる
+  const readyEligible = isReadyEligible({
+    summary,
+    reason,
+    childIds: item.childIds,
+  });
+  const effectiveReady = ready && readyEligible;
 
   const addComment = () => {
     const trimmed = newComment.trim();
@@ -80,6 +90,7 @@ export function ParentItemDetail({
       notes,
       comments,
       labels,
+      ready: effectiveReady,
     });
   };
 
@@ -95,6 +106,22 @@ export function ParentItemDetail({
           <span className="item-status">{laneName}</span>
         </header>
         <div className="item-detail-body">
+          <div className="ready-section">
+            <label className="ready-row">
+              <input
+                type="checkbox"
+                checked={effectiveReady}
+                disabled={!readyEligible}
+                onChange={(e) => setReady(e.target.checked)}
+              />
+              Ready
+            </label>
+            {!readyEligible && (
+              <p className="ready-hint">
+                Readyにするには、子アイテムが1つ以上あり、概要と理由が記載されている必要があります
+              </p>
+            )}
+          </div>
           <label>
             概要
             <textarea

@@ -193,6 +193,55 @@ describe("generateMarkdown", () => {
     expect(snapshot.children[0].labels).toEqual(["フロント"]);
   });
 
+  it("Readyの親アイテムはReady行を出力し、読み戻せる", () => {
+    const parent = createParentItem({
+      id: "P-1",
+      summary: "設計",
+      laneId: "lane-1",
+      reason: "理由",
+      childIds: ["C-1"],
+      ready: true,
+    });
+    const children = [
+      createChildItem({
+        id: "C-1",
+        parentId: "P-1",
+        description: "作業",
+        laneId: "lane-1",
+      }),
+    ];
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [parent], children },
+      lanes,
+    );
+    expect(md).toContain("- Ready: ✓");
+    const snapshot = parseMarkdown(md, lanes);
+    expect(snapshot.parents[0].ready).toBe(true);
+  });
+
+  it("Not ReadyのアイテムはReady行を出力せず、読み込み時はfalseになる", () => {
+    const parent = createParentItem({
+      id: "P-1",
+      summary: "設計",
+      laneId: "lane-1",
+    });
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [parent], children: [] },
+      lanes,
+    );
+    expect(md).not.toContain("- Ready:");
+    expect(parseMarkdown(md, lanes).parents[0].ready).toBe(false);
+  });
+
+  it("不正なReady値はエラーになる", () => {
+    const md = `# P
+
+## P-1: 設計
+- Ready: たぶん
+`;
+    expect(() => parseMarkdown(md, lanes)).toThrow(/Ready/);
+  });
+
   it("ラベルのないアイテムはラベル行を出力しない", () => {
     const parent = createParentItem({
       id: "P-1",

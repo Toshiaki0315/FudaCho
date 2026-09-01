@@ -26,7 +26,10 @@ export function ParentItemCard({
       <span className="item-badge" role="img" aria-label="親アイテム">
         📋
       </span>
-      <span className="item-id">{item.id}</span>
+      <span className="item-id">
+        {item.id}
+        {item.ready && <span className="ready-badge">Ready</span>}
+      </span>
       <p className="item-summary">{item.summary}</p>
       <LabelChips labels={item.labels} onLabelClick={onLabelClick} />
       <progress max={100} value={percent} />
