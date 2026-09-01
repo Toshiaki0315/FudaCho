@@ -575,6 +575,48 @@ describe("boardStore", () => {
     });
   });
 
+  describe("deleteItem（完全削除）", () => {
+    it("子アイテムを削除すると親のchildIdsとレーンからも取り除かれる", () => {
+      const store = useBoardStore.getState();
+      const parentId = store.addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      useBoardStore.getState().deleteItem("C-1");
+      const state = useBoardStore.getState();
+      expect(state.children["C-1"]).toBeUndefined();
+      expect(state.parents["P-1"].childIds).toEqual(["C-2"]);
+      expect(state.laneOrder["lane-1"]).toEqual(["P-1", "C-2"]);
+    });
+
+    it("親アイテムを削除すると子アイテムもすべて削除される", () => {
+      const store = useBoardStore.getState();
+      const parentId = store.addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      useBoardStore.getState().moveItem("C-2", "lane-3");
+      useBoardStore.getState().deleteItem("P-1");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"]).toBeUndefined();
+      expect(state.children).toEqual({});
+      expect(state.laneOrder["lane-1"]).toEqual([]);
+      expect(state.laneOrder["lane-3"]).toEqual([]);
+    });
+
+    it("他のアイテムには影響しない", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "残すタスク" });
+      useBoardStore.getState().addParent({ summary: "消すタスク" });
+      useBoardStore.getState().deleteItem("P-2");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].summary).toBe("残すタスク");
+      expect(state.laneOrder["lane-1"]).toEqual(["P-1"]);
+    });
+
+    it("存在しないIDの削除はエラーになる", () => {
+      expect(() => useBoardStore.getState().deleteItem("X-1")).toThrow(/X-1/);
+    });
+  });
+
   describe("exportMarkdown", () => {
     it("現在のボードをマークダウンとして出力する（レーン順・レーン名表記）", () => {
       const store = useBoardStore.getState();

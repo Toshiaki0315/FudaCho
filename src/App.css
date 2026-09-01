@@ -276,10 +276,18 @@ body {
   font-size: 13px;
   border-radius: 5px;
   cursor: pointer;
-  color: #cf222e;
+  color: #1f2328;
 }
 
 .context-menu button:hover:not(:disabled) {
+  background-color: #f3f4f6;
+}
+
+.context-menu button.danger {
+  color: #cf222e;
+}
+
+.context-menu button.danger:hover:not(:disabled) {
   background-color: #fff1f0;
 }
 

@@ -15,6 +15,7 @@ import {
   createEmptyLaneOrder,
   insertIntoLane,
   moveToLane,
+  removeFromLanes,
   reorderWithinLane,
   type LaneOrder,
 } from "../domain/laneOrder";
@@ -72,6 +73,7 @@ interface BoardState extends PersistedBoard {
   reorderLane: (laneId: string, fromIndex: number, toIndex: number) => void;
   handleDragEnd: (activeId: string, overId: string | null) => void;
   dropItem: (itemId: string) => void;
+  deleteItem: (itemId: string) => void;
   exportMarkdown: () => string;
   importMarkdown: (markdown: string) => void;
   reset: () => void;
@@ -296,6 +298,35 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     for (const id of targets) {
       get().moveItem(id, dropLane.id);
     }
+  },
+
+  deleteItem(itemId) {
+    const { parents, children } = get();
+    if (!parents[itemId] && !children[itemId]) {
+      throw new Error(`アイテム ${itemId} が見つかりません`);
+    }
+    set((state) => {
+      // 親を削除する場合は子アイテムもすべて削除する
+      const idsToDelete = [itemId, ...(state.parents[itemId]?.childIds ?? [])];
+      const nextParents = { ...state.parents };
+      const nextChildren = { ...state.children };
+      let laneOrder = state.laneOrder;
+      for (const id of idsToDelete) {
+        delete nextParents[id];
+        delete nextChildren[id];
+        laneOrder = removeFromLanes(laneOrder, id);
+      }
+      // 子アイテムの削除は親のchildIdsからも取り除く
+      const child = state.children[itemId];
+      if (child) {
+        const parent = nextParents[child.parentId];
+        nextParents[child.parentId] = {
+          ...parent,
+          childIds: parent.childIds.filter((id) => id !== itemId),
+        };
+      }
+      return { parents: nextParents, children: nextChildren, laneOrder };
+    });
   },
 
   exportMarkdown() {

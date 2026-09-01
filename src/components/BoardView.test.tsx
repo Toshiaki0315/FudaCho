@@ -404,6 +404,38 @@ describe("BoardView", () => {
       expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     });
 
+    it("Dropの下に削除メニューがあり、子アイテムを完全削除できる", async () => {
+      const user = userEvent.setup();
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      useBoardStore.getState().addChild({ parentId, description: "作業2" });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("作業1"));
+      const items = screen.getAllByRole("menuitem");
+      expect(items.map((i) => i.textContent)).toEqual(["Drop", "削除"]);
+      await user.click(screen.getByRole("menuitem", { name: "削除" }));
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(screen.queryByText("作業1")).not.toBeInTheDocument();
+      expect(useBoardStore.getState().children["C-1"]).toBeUndefined();
+      // 親カードの子カウントも更新される
+      expect(screen.getByText("子 0 / 1")).toBeInTheDocument();
+    });
+
+    it("親アイテムを削除すると子アイテムのカードも消える", async () => {
+      const user = userEvent.setup();
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "設計する" });
+      useBoardStore.getState().addChild({ parentId, description: "作業1" });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(screen.getByRole("menuitem", { name: "削除" }));
+      expect(screen.queryByText("設計する")).not.toBeInTheDocument();
+      expect(screen.queryByText("作業1")).not.toBeInTheDocument();
+    });
+
     it("メニューの外側を右クリックしてもメニューが閉じる", () => {
       useBoardStore.getState().addParent({ summary: "設計する" });
       render(<BoardView />);

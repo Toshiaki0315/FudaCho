@@ -53,6 +53,7 @@ export function BoardView() {
   const updateParent = useBoardStore((state) => state.updateParent);
   const updateChild = useBoardStore((state) => state.updateChild);
   const dropItem = useBoardStore((state) => state.dropItem);
+  const deleteItem = useBoardStore((state) => state.deleteItem);
   const notice = useBoardStore((state) => state.notice);
   const clearNotice = useBoardStore((state) => state.clearNotice);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -258,6 +259,17 @@ export function BoardView() {
               }}
             >
               Drop
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="danger"
+              onClick={() => {
+                deleteItem(contextMenu.itemId);
+                setContextMenu(null);
+              }}
+            >
+              削除
             </button>
           </div>
         </>
