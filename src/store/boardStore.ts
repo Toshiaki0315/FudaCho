@@ -59,6 +59,9 @@ export function selectPersisted(state: PersistedBoard): PersistedBoard {
 }
 
 interface BoardState extends PersistedBoard {
+  /** 操作がブロックされた時などにUIへ表示する一時的な通知（永続化しない） */
+  notice: string | null;
+  clearNotice: () => void;
   hydrate: (persisted: PersistedBoard) => void;
   addParent: (input: AddParentInput) => string;
   addChild: (input: AddChildInput & { parentId: string }) => string;
@@ -83,6 +86,7 @@ function initialState() {
     laneOrder: createEmptyLaneOrder(settings.lanes.map((lane) => lane.id)),
     nextParentNumber: 1,
     nextChildNumber: 1,
+    notice: null as string | null,
   };
 }
 
@@ -228,15 +232,23 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       return;
     }
     if (action.type === "move") {
-      // WIP制限に達したレーンへのD&Dは黙って無視する（ドラッグ操作を失敗にしない）
+      // WIP制限に達したレーンへのD&Dは移動せず、通知メッセージで知らせる
       const toLane = settings.lanes.find((lane) => lane.id === action.toLaneId);
       if (toLane && !canAcceptMore(toLane, laneOrder[action.toLaneId].length)) {
+        set({
+          notice: `レーン「${toLane.name}」はWIP制限（${toLane.wipLimit}）に達しているため移動できません`,
+        });
         return;
       }
       get().moveItem(activeId, action.toLaneId, action.index);
+      set({ notice: null });
     } else {
       get().reorderLane(action.laneId, action.fromIndex, action.toIndex);
     }
+  },
+
+  clearNotice() {
+    set({ notice: null });
   },
 
   dropItem(itemId) {

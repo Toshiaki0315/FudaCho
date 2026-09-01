@@ -1,6 +1,6 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useBoardStore } from "../store/boardStore";
 import { BoardView } from "./BoardView";
 
@@ -112,6 +112,55 @@ describe("BoardView", () => {
     useBoardStore.getState().moveItem("P-2", "lane-2");
     render(<BoardView />);
     expect(screen.getByRole("button", { name: "Drop" })).toBeDisabled();
+  });
+
+  it("WIP制限で移動できない場合は通知が表示され、閉じるボタンで消せる", async () => {
+    const user = userEvent.setup();
+    const { settings } = useBoardStore.getState();
+    useBoardStore.getState().updateSettings({
+      projectName: settings.projectName,
+      lanes: settings.lanes.map((lane) =>
+        lane.id === "lane-2" ? { ...lane, wipLimit: 1 } : lane,
+      ),
+    });
+    useBoardStore.getState().addParent({ summary: "A" });
+    useBoardStore.getState().addParent({ summary: "B" });
+    useBoardStore.getState().moveItem("P-1", "lane-2");
+    render(<BoardView />);
+    useBoardStore.getState().handleDragEnd("P-2", "lane-2");
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "レーン「作業中」はWIP制限（1）に達しているため移動できません",
+    );
+    await user.click(within(alert).getByRole("button", { name: "閉じる" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("通知は数秒後に自動で消える", async () => {
+    vi.useFakeTimers();
+    try {
+      const { settings } = useBoardStore.getState();
+      useBoardStore.getState().updateSettings({
+        projectName: settings.projectName,
+        lanes: settings.lanes.map((lane) =>
+          lane.id === "lane-2" ? { ...lane, wipLimit: 1 } : lane,
+        ),
+      });
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      render(<BoardView />);
+      act(() => {
+        useBoardStore.getState().handleDragEnd("P-2", "lane-2");
+      });
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("親カードをダブルクリックすると詳細ビューが開きレーン名が表示される", async () => {

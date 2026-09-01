@@ -153,6 +153,39 @@ describe("boardStore", () => {
       expect(state.laneOrder["lane-2"]).toEqual(["P-1"]);
     });
 
+    it("D&Dがブロックされた場合は通知メッセージが設定される", () => {
+      limitLane2To1();
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      expect(useBoardStore.getState().notice).toBeNull();
+      useBoardStore.getState().handleDragEnd("P-2", "lane-2");
+      expect(useBoardStore.getState().notice).toBe(
+        "レーン「作業中」はWIP制限（1）に達しているため移動できません",
+      );
+    });
+
+    it("移動が成功した場合は通知は設定されない（既存の通知は消える）", () => {
+      limitLane2To1();
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      useBoardStore.getState().handleDragEnd("P-2", "lane-2");
+      expect(useBoardStore.getState().notice).not.toBeNull();
+      useBoardStore.getState().handleDragEnd("P-2", "lane-3");
+      expect(useBoardStore.getState().notice).toBeNull();
+    });
+
+    it("clearNoticeで通知を消せる", () => {
+      limitLane2To1();
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      useBoardStore.getState().handleDragEnd("P-2", "lane-2");
+      useBoardStore.getState().clearNotice();
+      expect(useBoardStore.getState().notice).toBeNull();
+    });
+
     it("D&DでWIP制限レーン内のアイテム上へのドロップ（レーン間移動）も無視される", () => {
       limitLane2To1();
       useBoardStore.getState().addParent({ summary: "A" });

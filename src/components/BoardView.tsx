@@ -11,7 +11,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { canAcceptMore, findDropLane, type Lane } from "../domain/lane";
 import { useBoardStore } from "../store/boardStore";
 import { ChildItemCard } from "./ChildItemCard";
@@ -52,9 +52,20 @@ export function BoardView() {
   const updateParent = useBoardStore((state) => state.updateParent);
   const updateChild = useBoardStore((state) => state.updateChild);
   const dropItem = useBoardStore((state) => state.dropItem);
+  const notice = useBoardStore((state) => state.notice);
+  const clearNotice = useBoardStore((state) => state.clearNotice);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // ドラッグ中のアイテムID。DragOverlayに複製カードを表示するために保持する
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // 通知は数秒後に自動で消える
+  useEffect(() => {
+    if (notice === null) {
+      return;
+    }
+    const timer = setTimeout(clearNotice, 4000);
+    return () => clearTimeout(timer);
+  }, [notice, clearNotice]);
 
   // アイテムのあるレーンは削除できない（updateSettingsが保証）ため、レーンは必ず見つかる
   const laneNameOf = (laneId: string) =>
@@ -154,6 +165,14 @@ export function BoardView() {
           <div className="drag-overlay-card">{overlayCard(activeId)}</div>
         )}
       </DragOverlay>
+      {notice !== null && (
+        <div role="alert" className="board-notice">
+          <span>{notice}</span>
+          <button type="button" onClick={clearNotice}>
+            閉じる
+          </button>
+        </div>
+      )}
       {selectedParent && (
         <ParentItemDetail
           item={selectedParent}

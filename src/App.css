@@ -110,6 +110,34 @@ body {
   cursor: grabbing;
 }
 
+.board-notice {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #57131a;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 20;
+  animation: fade-in 0.15s ease;
+}
+
+.board-notice button {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 6px;
+  background: none;
+  color: #ffffff;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 .drag-overlay-card .item-card {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   transform: rotate(2deg);
