@@ -50,6 +50,37 @@ describe("BoardView", () => {
     expect(within(todoLane).getByText("P-1")).toBeInTheDocument();
   });
 
+  it("作業中レーンのカードにDropボタンが表示される", () => {
+    const store = useBoardStore.getState();
+    store.addParent({ summary: "設計する" });
+    useBoardStore.getState().moveItem("P-1", "InProgress");
+    render(<BoardView />);
+    const inProgressLane = screen.getByRole("region", { name: "作業中" });
+    expect(
+      within(inProgressLane).getByRole("button", { name: "Drop" }),
+    ).toBeInTheDocument();
+  });
+
+  it("作業中以外のレーンのカードにはDropボタンが表示されない", () => {
+    useBoardStore.getState().addParent({ summary: "設計する" });
+    render(<BoardView />);
+    expect(
+      screen.queryByRole("button", { name: "Drop" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("Dropボタンで作業中のアイテムが中断レーンに移動しデータは保持される", async () => {
+    const user = userEvent.setup();
+    const store = useBoardStore.getState();
+    store.addParent({ summary: "設計する" });
+    useBoardStore.getState().moveItem("P-1", "InProgress");
+    render(<BoardView />);
+    await user.click(screen.getByRole("button", { name: "Drop" }));
+    const droppedLane = screen.getByRole("region", { name: "中断" });
+    expect(within(droppedLane).getByText("設計する")).toBeInTheDocument();
+    expect(useBoardStore.getState().parents["P-1"].status).toBe("Dropped");
+  });
+
   it("カードはドラッグ可能である（ドラッグ属性を持つ）", () => {
     useBoardStore.getState().addParent({ summary: "設計する" });
     render(<BoardView />);

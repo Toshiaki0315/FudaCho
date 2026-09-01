@@ -33,14 +33,32 @@ export function BoardView() {
   const laneOrder = useBoardStore((state) => state.laneOrder);
   const handleDragEnd = useBoardStore((state) => state.handleDragEnd);
   const addParent = useBoardStore((state) => state.addParent);
+  const dropItem = useBoardStore((state) => state.dropItem);
 
-  const renderCard = (itemId: string) => {
+  const renderCard = (itemId: string, status: Status) => {
     const parent = parents[itemId];
-    if (parent) {
-      const childItems = parent.childIds.map((childId) => children[childId]);
-      return <ParentItemCard item={parent} children_={childItems} />;
-    }
-    return <ChildItemCard item={children[itemId]} />;
+    const card = parent ? (
+      <ParentItemCard
+        item={parent}
+        children_={parent.childIds.map((childId) => children[childId])}
+      />
+    ) : (
+      <ChildItemCard item={children[itemId]} />
+    );
+    return (
+      <>
+        {card}
+        {status === "InProgress" && (
+          <button
+            type="button"
+            className="drop-item-button"
+            onClick={() => dropItem(itemId)}
+          >
+            Drop
+          </button>
+        )}
+      </>
+    );
   };
 
   const laneContent = (status: Status) => (
@@ -51,7 +69,7 @@ export function BoardView() {
       <LaneDropArea status={status}>
         {laneOrder[status].map((itemId) => (
           <SortableCard key={itemId} id={itemId}>
-            {renderCard(itemId)}
+            {renderCard(itemId, status)}
           </SortableCard>
         ))}
       </LaneDropArea>
