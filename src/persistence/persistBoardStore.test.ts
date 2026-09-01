@@ -34,6 +34,21 @@ describe("startPersistence", () => {
     stop();
   });
 
+  it("読み込めない保存データ（旧形式など）は破棄して初期状態で起動する", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const broken = {
+      settings: { projectName: "旧", lanes: [] },
+    } as unknown as PersistedBoard;
+    const { adapter } = fakeAdapter(broken);
+    const stop = await startPersistence(useBoardStore, adapter);
+    // 初期状態のまま起動し、エラーが記録される
+    expect(useBoardStore.getState().parents).toEqual({});
+    expect(useBoardStore.getState().settings.projectName).toBe("札帖");
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+    stop();
+  });
+
   it("保存済みデータがなければ何も復元しない", async () => {
     const { adapter } = fakeAdapter(null);
     const stop = await startPersistence(useBoardStore, adapter);

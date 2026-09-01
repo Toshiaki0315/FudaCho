@@ -12,7 +12,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useEffect, useState, type ReactNode } from "react";
-import { canAcceptMore, findDropLane, type Lane } from "../domain/lane";
+import { canAcceptMore, findLaneByRole } from "../domain/lane";
 import { mergeLabels } from "../domain/labels";
 import { useBoardStore } from "../store/boardStore";
 import { ChildItemCard } from "./ChildItemCard";
@@ -86,20 +86,21 @@ export function BoardView() {
   }, [notice, clearNotice]);
 
   // アイテムのあるレーンは削除できない（updateSettingsが保証）ため、レーンは必ず見つかる
-  const laneNameOf = (laneId: string) =>
-    settings.lanes.find((lane) => lane.id === laneId)!.name;
+  const laneOf = (laneId: string) =>
+    settings.lanes.find((lane) => lane.id === laneId)!;
 
   const laneCounts = Object.fromEntries(
     settings.lanes.map((lane) => [lane.id, laneOrder[lane.id].length]),
   );
-  const dropLane = findDropLane(settings.lanes);
-  const canDrop =
-    dropLane !== null && canAcceptMore(dropLane, laneCounts[dropLane.id]);
+  const dropLane = findLaneByRole(settings.lanes, "drop");
+  const canDrop = canAcceptMore(dropLane, laneCounts[dropLane.id]);
 
   // 子アイテムの実効ラベル = 親のラベル + 独自ラベル（親の変更が自動で引き継がれる）
   const effectiveLabelsOf = (childId: string) => {
     const child = children[childId];
-    return mergeLabels(parents[child.parentId].labels, child.labels);
+    const parentLabels =
+      child.parentId !== null ? parents[child.parentId].labels : [];
+    return mergeLabels(parentLabels, child.labels);
   };
 
   const matchesFilter = (itemId: string) => {
@@ -111,7 +112,7 @@ export function BoardView() {
     return labelFilters.every((label) => itemLabels.includes(label));
   };
 
-  const renderCard = (itemId: string, lane: Lane) => {
+  const renderCard = (itemId: string) => {
     const parent = parents[itemId];
     const card = parent ? (
       <ParentItemCard
@@ -136,22 +137,11 @@ export function BoardView() {
         }}
       >
         {card}
-        {lane.hasDropAction && (
-          <button
-            type="button"
-            className="drop-item-button"
-            disabled={!canDrop}
-            onClick={() => dropItem(itemId)}
-          >
-            Drop
-          </button>
-        )}
       </div>
     );
   };
 
   const laneContent = (laneId: string) => {
-    const lane = settings.lanes.find((l) => l.id === laneId)!;
     const visibleIds = laneOrder[laneId].filter(matchesFilter);
     return (
       <SortableContext
@@ -161,7 +151,7 @@ export function BoardView() {
         <LaneDropArea laneId={laneId}>
           {visibleIds.map((itemId) => (
             <SortableCard key={itemId} id={itemId}>
-              {renderCard(itemId, lane)}
+              {renderCard(itemId)}
             </SortableCard>
           ))}
         </LaneDropArea>
@@ -173,7 +163,7 @@ export function BoardView() {
   const selectedChild = selectedId ? children[selectedId] : undefined;
   const closeDetail = () => setSelectedId(null);
 
-  // ドラッグ中にポインタへ追従させる複製カード（Dropボタン等の操作は含めない）
+  // ドラッグ中にポインタへ追従させる複製カード（操作ボタン等は含めない）
   const overlayCard = (itemId: string) => {
     const parent = parents[itemId];
     return parent ? (
@@ -188,6 +178,18 @@ export function BoardView() {
   };
 
   const applyDragEnd = composeDragHandler(handleDragEnd);
+
+  // Close/Dropレーンのアイテムの右クリックメニューにはDropを表示しない
+  const contextMenuItem = contextMenu
+    ? (parents[contextMenu.itemId] ?? children[contextMenu.itemId])
+    : null;
+  const contextMenuLaneRole = contextMenuItem
+    ? laneOf(contextMenuItem.laneId).role
+    : null;
+  const showDropMenu =
+    contextMenuLaneRole !== null &&
+    contextMenuLaneRole !== "close" &&
+    contextMenuLaneRole !== "drop";
 
   return (
     <DndContext
@@ -222,7 +224,8 @@ export function BoardView() {
         lanes={settings.lanes}
         laneContent={laneContent}
         laneCounts={laneCounts}
-        onAddItem={() => addParent({ summary: "新規アイテム" })}
+        onAddParent={() => addParent({ summary: "新規アイテム" })}
+        onAddChild={() => addChild({ description: "新規子アイテム" })}
       />
       <DragOverlay dropAnimation={null}>
         {activeId !== null && (
@@ -248,18 +251,26 @@ export function BoardView() {
             <button
               type="button"
               role="menuitem"
-              disabled={
-                dropLane === null ||
-                (parents[contextMenu.itemId] ?? children[contextMenu.itemId])
-                  .laneId === dropLane.id
-              }
               onClick={() => {
-                dropItem(contextMenu.itemId);
+                setSelectedId(contextMenu.itemId);
                 setContextMenu(null);
               }}
             >
-              Drop
+              詳細表示
             </button>
+            {showDropMenu && (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={!canDrop}
+                onClick={() => {
+                  dropItem(contextMenu.itemId);
+                  setContextMenu(null);
+                }}
+              >
+                Drop
+              </button>
+            )}
             <button
               type="button"
               role="menuitem"
@@ -285,7 +296,7 @@ export function BoardView() {
       {selectedParent && (
         <ParentItemDetail
           item={selectedParent}
-          laneName={laneNameOf(selectedParent.laneId)}
+          laneName={laneOf(selectedParent.laneId).name}
           onSave={(patch) => {
             updateParent(selectedParent.id, patch);
             closeDetail();
@@ -303,8 +314,12 @@ export function BoardView() {
       {selectedChild && (
         <ChildItemDetail
           item={selectedChild}
-          parentLabels={parents[selectedChild.parentId].labels}
-          laneName={laneNameOf(selectedChild.laneId)}
+          parentLabels={
+            selectedChild.parentId !== null
+              ? parents[selectedChild.parentId].labels
+              : []
+          }
+          laneName={laneOf(selectedChild.laneId).name}
           onSave={(patch) => {
             updateChild(selectedChild.id, patch);
             closeDetail();

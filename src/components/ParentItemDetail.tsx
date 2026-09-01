@@ -57,11 +57,7 @@ export function ParentItemDetail({
   const [ready, setReady] = useState(item.ready);
 
   // Ready条件（概要・理由は編集中の値で判定）。条件を満たさない場合は自動的にNot Readyになる
-  const readyEligible = isReadyEligible({
-    summary,
-    reason,
-    childIds: item.childIds,
-  });
+  const readyEligible = isReadyEligible({ summary, reason });
   const effectiveReady = ready && readyEligible;
 
   const addComment = () => {
@@ -118,7 +114,7 @@ export function ParentItemDetail({
             </label>
             {!readyEligible && (
               <p className="ready-hint">
-                Readyにするには、子アイテムが1つ以上あり、概要と理由が記載されている必要があります
+                Readyにするには、概要と理由が記載されている必要があります
               </p>
             )}
           </div>
@@ -246,7 +242,16 @@ export function ParentItemDetail({
         </div>
         <footer className="item-detail-footer">
           {onAddChild && (
-            <button type="button" onClick={onAddChild}>
+            <button
+              type="button"
+              disabled={!effectiveReady}
+              title={
+                effectiveReady
+                  ? undefined
+                  : "子アイテムの追加はReadyにしてから行えます"
+              }
+              onClick={onAddChild}
+            >
               ＋子アイテムを追加
             </button>
           )}

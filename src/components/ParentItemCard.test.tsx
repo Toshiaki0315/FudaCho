@@ -5,7 +5,7 @@ import { createDefaultLanes } from "../domain/lane";
 import { createParentItem } from "../domain/parentItem";
 import { ParentItemCard } from "./ParentItemCard";
 
-// デフォルトレーン: lane-1=未着手, lane-3=完了
+// デフォルトレーン: lane-1=PBL, lane-2=SBL, lane-4=Close, lane-5=Drop
 const lanes = createDefaultLanes();
 
 function parent(childIds: string[] = []) {
@@ -39,7 +39,7 @@ describe("ParentItemCard", () => {
   });
 
   it("子アイテムの完了状況から進捗率を計算して表示する", () => {
-    const children = [child("C-1", "lane-3"), child("C-2", "lane-1")];
+    const children = [child("C-1", "lane-4"), child("C-2", "lane-1")];
     render(
       <ParentItemCard
         item={parent(["C-1", "C-2"])}
@@ -52,7 +52,7 @@ describe("ParentItemCard", () => {
 
   it("進捗率は整数に丸めて表示する", () => {
     const children = [
-      child("C-1", "lane-3"),
+      child("C-1", "lane-4"),
       child("C-2", "lane-1"),
       child("C-3", "lane-1"),
     ];
@@ -63,7 +63,7 @@ describe("ParentItemCard", () => {
   });
 
   it("子アイテムを持つ場合は「完了数 / 総数」を表示する", () => {
-    const children = [child("C-1", "lane-3"), child("C-2", "lane-1")];
+    const children = [child("C-1", "lane-4"), child("C-2", "lane-1")];
     render(
       <ParentItemCard
         item={parent(["C-1", "C-2"])}
@@ -97,16 +97,9 @@ describe("ParentItemCard", () => {
       summary: "設計する",
       laneId: "lane-1",
       reason: "理由",
-      childIds: ["C-1"],
       ready: true,
     });
-    render(
-      <ParentItemCard
-        item={item}
-        children_={[child("C-1", "lane-1")]}
-        lanes={lanes}
-      />,
-    );
+    render(<ParentItemCard item={item} children_={[]} lanes={lanes} />);
     expect(screen.getByText("Ready")).toBeInTheDocument();
   });
 

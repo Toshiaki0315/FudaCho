@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { createLane, type Lane } from "../domain/lane";
+import {
+  createLane,
+  isFixedRole,
+  type Lane,
+  type LaneRole,
+} from "../domain/lane";
 import type { Settings } from "../domain/settings";
 
 interface SettingsDialogProps {
@@ -7,6 +12,13 @@ interface SettingsDialogProps {
   onSave: (settings: Settings) => void;
   onClose: () => void;
 }
+
+const ROLE_BADGES: Record<Exclude<LaneRole, "free">, string> = {
+  pbl: "PBL",
+  sbl: "SBL",
+  close: "Close",
+  drop: "Drop",
+};
 
 function nextLaneId(lanes: Lane[]): string {
   const max = lanes.reduce((acc, lane) => {
@@ -40,6 +52,10 @@ export function SettingsDialog({
     setLanes(lanes.filter((_, i) => i !== index));
   };
 
+  // 自由レーンの範囲: PBL/SBLの後（index 2）から Close の手前まで
+  const freeStart = 2;
+  const freeEnd = lanes.length - 3;
+
   const moveLane = (index: number, direction: -1 | 1) => {
     const next = [...lanes];
     const [moved] = next.splice(index, 1);
@@ -48,10 +64,14 @@ export function SettingsDialog({
   };
 
   const addLane = () => {
-    setLanes([
-      ...lanes,
+    const next = [...lanes];
+    // Closeの手前（自由レーンの末尾）に挿入する
+    next.splice(
+      lanes.length - 2,
+      0,
       createLane({ id: nextLaneId(lanes), name: "新しいレーン" }),
-    ]);
+    );
+    setLanes(next);
   };
 
   const handleSave = () => {
@@ -97,27 +117,31 @@ export function SettingsDialog({
                   value={lane.wipLimit ?? ""}
                   onChange={(e) => setWipLimit(index, e.target.value)}
                 />
-                <button
-                  type="button"
-                  disabled={index === 0}
-                  onClick={() => moveLane(index, -1)}
-                >
-                  上へ
-                </button>
-                <button
-                  type="button"
-                  disabled={index === lanes.length - 1}
-                  onClick={() => moveLane(index, 1)}
-                >
-                  下へ
-                </button>
-                {lane.isDefaultEntry ? (
-                  // 投入先レーンは削除できないため、削除ボタンの位置にバッジを表示する
-                  <span className="settings-lane-tag">投入先</span>
+                {isFixedRole(lane.role) ? (
+                  // 固定レーンは改名のみ可能（削除・並び替え不可）
+                  <span className="settings-lane-tag">
+                    {ROLE_BADGES[lane.role as Exclude<LaneRole, "free">]}
+                  </span>
                 ) : (
-                  <button type="button" onClick={() => removeLane(index)}>
-                    削除
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={index === freeStart}
+                      onClick={() => moveLane(index, -1)}
+                    >
+                      上へ
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === freeEnd}
+                      onClick={() => moveLane(index, 1)}
+                    >
+                      下へ
+                    </button>
+                    <button type="button" onClick={() => removeLane(index)}>
+                      削除
+                    </button>
+                  </>
                 )}
               </li>
             ))}

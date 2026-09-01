@@ -12,14 +12,14 @@ describe("createDefaultSettings", () => {
     expect(settings.projectName).toBe("マイプロジェクト");
   });
 
-  it("デフォルトの5レーンを持つ", () => {
+  it("デフォルトの5レーン（PBL/SBL/自由/Close/Drop）を持つ", () => {
     const settings = createDefaultSettings();
     expect(settings.lanes.map((lane) => lane.name)).toEqual([
-      "未着手",
+      "PBL",
+      "SBL",
       "作業中",
-      "完了",
-      "クローズ",
-      "中断",
+      "Close",
+      "Drop",
     ]);
   });
 

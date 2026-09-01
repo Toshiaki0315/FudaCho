@@ -83,27 +83,37 @@ describe("createParentItem", () => {
     expect(item.childIds).toEqual(["C-1", "C-2"]);
   });
 
-  it("条件を満たしていればReadyにできる（子1つ以上・概要と理由が記載済み）", () => {
+  it("条件を満たしていればReadyにできる（概要と理由が記載済み）", () => {
     const item = createParentItem({
       id: "P-1",
       summary: "設計する",
       laneId: "lane-1",
       reason: "リリースに必要",
-      childIds: ["C-1"],
+      ready: true,
+    });
+    expect(item.ready).toBe(true);
+  });
+
+  it("子アイテムがなくてもReadyにできる（Ready後に子を作るため）", () => {
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+      reason: "理由",
+      childIds: [],
       ready: true,
     });
     expect(item.ready).toBe(true);
   });
 
   it.each([
-    ["子アイテムがない", { reason: "理由", childIds: [] }],
-    ["理由が空", { reason: "", childIds: ["C-1"] }],
-    ["理由が空白のみ", { reason: "  ", childIds: ["C-1"] }],
+    ["理由が空", { summary: "設計する", reason: "" }],
+    ["理由が空白のみ", { summary: "設計する", reason: "  " }],
+    ["概要が空白のみ", { summary: " ", reason: "理由" }],
   ])("Ready条件を満たさない場合はエラーになる（%s）", (_name, over) => {
     expect(() =>
       createParentItem({
         id: "P-1",
-        summary: "設計する",
         laneId: "lane-1",
         ready: true,
         ...over,
@@ -117,38 +127,15 @@ describe("createParentItem", () => {
         id: "P-1",
         summary: "設計する",
         laneId: "lane-1",
-        childIds: ["C-1"],
-        ready: true,
-      }),
-    ).toThrow(/Ready/);
-  });
-
-  it("概要が空白のみの場合もReadyにできない", () => {
-    expect(() =>
-      createParentItem({
-        id: "P-1",
-        summary: " ",
-        laneId: "lane-1",
-        reason: "理由",
-        childIds: ["C-1"],
         ready: true,
       }),
     ).toThrow(/Ready/);
   });
 
   it("isReadyEligibleでReady条件を判定できる", () => {
-    expect(
-      isReadyEligible({ summary: "概要", reason: "理由", childIds: ["C-1"] }),
-    ).toBe(true);
-    expect(
-      isReadyEligible({ summary: "概要", reason: "理由", childIds: [] }),
-    ).toBe(false);
-    expect(
-      isReadyEligible({ summary: "", reason: "理由", childIds: ["C-1"] }),
-    ).toBe(false);
-    expect(
-      isReadyEligible({ summary: "概要", reason: "", childIds: ["C-1"] }),
-    ).toBe(false);
+    expect(isReadyEligible({ summary: "概要", reason: "理由" })).toBe(true);
+    expect(isReadyEligible({ summary: "", reason: "理由" })).toBe(false);
+    expect(isReadyEligible({ summary: "概要", reason: "" })).toBe(false);
   });
 
   it("不正なラベル（区切り文字入り）はエラーになる", () => {

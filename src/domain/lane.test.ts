@@ -3,91 +3,68 @@ import {
   canAcceptMore,
   createDefaultLanes,
   createLane,
-  findDefaultEntryLane,
-  findDropLane,
+  findLaneByRole,
+  isFixedRole,
   validateLanes,
 } from "./lane";
 
 describe("createDefaultLanes", () => {
-  it("従来の5レーン相当のデフォルトレーンを生成する", () => {
+  it("PBL・SBL・自由レーン・Close・Dropの5レーンを生成する", () => {
     const lanes = createDefaultLanes();
     expect(lanes.map((l) => l.name)).toEqual([
-      "未着手",
+      "PBL",
+      "SBL",
       "作業中",
-      "完了",
-      "クローズ",
-      "中断",
+      "Close",
+      "Drop",
+    ]);
+    expect(lanes.map((l) => l.role)).toEqual([
+      "pbl",
+      "sbl",
+      "free",
+      "close",
+      "drop",
     ]);
   });
 
-  it("各レーンは不変の一意なIDを持つ", () => {
+  it("各レーンは不変の一意なIDを持ち、WIP制限はデフォルトなし", () => {
     const lanes = createDefaultLanes();
-    const ids = lanes.map((l) => l.id);
-    expect(new Set(ids).size).toBe(5);
-    for (const id of ids) {
-      expect(id).toMatch(/^lane-\d+$/);
-    }
-  });
-
-  it("「未着手」だけが新規アイテムの投入先である", () => {
-    const lanes = createDefaultLanes();
-    expect(lanes.filter((l) => l.isDefaultEntry).map((l) => l.name)).toEqual([
-      "未着手",
-    ]);
-  });
-
-  it("「完了」「クローズ」は進捗率の完了扱いである", () => {
-    const lanes = createDefaultLanes();
-    expect(lanes.filter((l) => l.countsAsDone).map((l) => l.name)).toEqual([
-      "完了",
-      "クローズ",
-    ]);
-  });
-
-  it("「中断」は進捗率の分母から除外される", () => {
-    const lanes = createDefaultLanes();
-    expect(
-      lanes.filter((l) => l.excludedFromProgress).map((l) => l.name),
-    ).toEqual(["中断"]);
-  });
-
-  it("デフォルトではどのレーンもDrop操作を持たない（Droppedへの移動はD&Dで行う）", () => {
-    const lanes = createDefaultLanes();
-    expect(lanes.filter((l) => l.hasDropAction)).toEqual([]);
-  });
-
-  it("デフォルトではWIP制限なし・全レーンへ移動可能である", () => {
-    for (const lane of createDefaultLanes()) {
+    expect(new Set(lanes.map((l) => l.id)).size).toBe(5);
+    for (const lane of lanes) {
       expect(lane.wipLimit).toBeNull();
-      expect(lane.moveTargets).toBe("all");
     }
   });
 });
 
 describe("createLane", () => {
-  it("IDと名前だけ指定すると他はデフォルト属性になる", () => {
-    const lane = createLane({ id: "lane-9", name: "レビュー" });
-    expect(lane).toEqual({
+  it("IDと名前だけ指定すると自由レーンになる", () => {
+    expect(createLane({ id: "lane-9", name: "レビュー" })).toEqual({
       id: "lane-9",
       name: "レビュー",
+      role: "free",
       wipLimit: null,
-      moveTargets: "all",
-      hasDropAction: false,
-      countsAsDone: false,
-      excludedFromProgress: false,
-      isDefaultEntry: false,
     });
   });
 
-  it("属性を指定して作成できる", () => {
+  it("役割とWIP制限を指定して作成できる", () => {
     const lane = createLane({
       id: "lane-9",
-      name: "レビュー",
+      name: "受付",
+      role: "pbl",
       wipLimit: 3,
-      countsAsDone: true,
     });
+    expect(lane.role).toBe("pbl");
     expect(lane.wipLimit).toBe(3);
-    expect(lane.countsAsDone).toBe(true);
+  });
+});
+
+describe("isFixedRole", () => {
+  it("pbl/sbl/close/dropは固定役割、freeは固定でない", () => {
+    expect(isFixedRole("pbl")).toBe(true);
+    expect(isFixedRole("sbl")).toBe(true);
+    expect(isFixedRole("close")).toBe(true);
+    expect(isFixedRole("drop")).toBe(true);
+    expect(isFixedRole("free")).toBe(false);
   });
 });
 
@@ -96,87 +73,115 @@ describe("validateLanes", () => {
     expect(() => validateLanes(createDefaultLanes())).not.toThrow();
   });
 
-  it("0件はエラーになる", () => {
-    expect(() => validateLanes([])).toThrow(/レーン/);
+  it("自由レーンが複数あっても妥当である", () => {
+    const lanes = [
+      createLane({ id: "l1", name: "PBL", role: "pbl" }),
+      createLane({ id: "l2", name: "SBL", role: "sbl" }),
+      createLane({ id: "l3", name: "A" }),
+      createLane({ id: "l4", name: "B" }),
+      createLane({ id: "l5", name: "Close", role: "close" }),
+      createLane({ id: "l6", name: "Drop", role: "drop" }),
+    ];
+    expect(() => validateLanes(lanes)).not.toThrow();
+  });
+
+  it("自由レーンが1つもない場合はエラーになる", () => {
+    const lanes = [
+      createLane({ id: "l1", name: "PBL", role: "pbl" }),
+      createLane({ id: "l2", name: "SBL", role: "sbl" }),
+      createLane({ id: "l5", name: "Close", role: "close" }),
+      createLane({ id: "l6", name: "Drop", role: "drop" }),
+    ];
+    expect(() => validateLanes(lanes)).toThrow(/自由レーン/);
+  });
+
+  it.each(["pbl", "sbl", "close", "drop"] as const)(
+    "固定役割 %s が欠けている場合はエラーになる",
+    (missing) => {
+      const lanes = [
+        createLane({ id: "l1", name: "PBL", role: "pbl" }),
+        createLane({ id: "l2", name: "SBL", role: "sbl" }),
+        createLane({ id: "l3", name: "A" }),
+        createLane({ id: "l5", name: "Close", role: "close" }),
+        createLane({ id: "l6", name: "Drop", role: "drop" }),
+      ].filter((lane) => lane.role !== missing);
+      expect(() => validateLanes(lanes)).toThrow(/役割/);
+    },
+  );
+
+  it("固定役割が重複している場合はエラーになる", () => {
+    const lanes = [
+      createLane({ id: "l1", name: "PBL", role: "pbl" }),
+      createLane({ id: "l2", name: "PBL2", role: "pbl" }),
+      createLane({ id: "l3", name: "SBL", role: "sbl" }),
+      createLane({ id: "l4", name: "A" }),
+      createLane({ id: "l5", name: "Close", role: "close" }),
+      createLane({ id: "l6", name: "Drop", role: "drop" }),
+    ];
+    expect(() => validateLanes(lanes)).toThrow(/役割/);
+  });
+
+  it("並び順が PBL, SBL, 自由…, Close, Drop でない場合はエラーになる", () => {
+    const lanes = [
+      createLane({ id: "l2", name: "SBL", role: "sbl" }),
+      createLane({ id: "l1", name: "PBL", role: "pbl" }),
+      createLane({ id: "l3", name: "A" }),
+      createLane({ id: "l5", name: "Close", role: "close" }),
+      createLane({ id: "l6", name: "Drop", role: "drop" }),
+    ];
+    expect(() => validateLanes(lanes)).toThrow(/並び順/);
   });
 
   it("IDの重複はエラーになる", () => {
     const lanes = [
-      createLane({ id: "lane-1", name: "A", isDefaultEntry: true }),
-      createLane({ id: "lane-1", name: "B" }),
+      createLane({ id: "l1", name: "PBL", role: "pbl" }),
+      createLane({ id: "l1", name: "SBL", role: "sbl" }),
+      createLane({ id: "l3", name: "A" }),
+      createLane({ id: "l5", name: "Close", role: "close" }),
+      createLane({ id: "l6", name: "Drop", role: "drop" }),
     ];
     expect(() => validateLanes(lanes)).toThrow(/重複/);
   });
 
   it("空のレーン名はエラーになる", () => {
-    const lanes = [
-      createLane({ id: "lane-1", name: "", isDefaultEntry: true }),
-    ];
+    const lanes = createDefaultLanes().map((lane) =>
+      lane.role === "sbl" ? { ...lane, name: "" } : lane,
+    );
     expect(() => validateLanes(lanes)).toThrow(/レーン名/);
   });
 
-  it("新規投入先レーンがちょうど1つでない場合はエラーになる", () => {
-    expect(() =>
-      validateLanes([createLane({ id: "lane-1", name: "A" })]),
-    ).toThrow(/投入先/);
-    expect(() =>
-      validateLanes([
-        createLane({ id: "lane-1", name: "A", isDefaultEntry: true }),
-        createLane({ id: "lane-2", name: "B", isDefaultEntry: true }),
-      ]),
-    ).toThrow(/投入先/);
-  });
-
   it("WIP制限は1〜99の整数またはnullのみ許容する", () => {
-    const base = { id: "lane-1", name: "A", isDefaultEntry: true };
-    expect(() => validateLanes([createLane({ ...base, wipLimit: 0 })])).toThrow(
-      /WIP/,
-    );
-    expect(() =>
-      validateLanes([createLane({ ...base, wipLimit: 100 })]),
-    ).toThrow(/WIP/);
-    expect(() =>
-      validateLanes([createLane({ ...base, wipLimit: 1.5 })]),
-    ).toThrow(/WIP/);
-    expect(() =>
-      validateLanes([createLane({ ...base, wipLimit: 1 })]),
-    ).not.toThrow();
-    expect(() =>
-      validateLanes([createLane({ ...base, wipLimit: 99 })]),
-    ).not.toThrow();
+    const withWip = (wipLimit: number) =>
+      createDefaultLanes().map((lane) =>
+        lane.role === "free" ? { ...lane, wipLimit } : lane,
+      );
+    expect(() => validateLanes(withWip(0))).toThrow(/WIP/);
+    expect(() => validateLanes(withWip(100))).toThrow(/WIP/);
+    expect(() => validateLanes(withWip(1.5))).toThrow(/WIP/);
+    expect(() => validateLanes(withWip(1))).not.toThrow();
+    expect(() => validateLanes(withWip(99))).not.toThrow();
+  });
+});
+
+describe("findLaneByRole", () => {
+  it("役割からレーンを取得できる", () => {
+    const lanes = createDefaultLanes();
+    expect(findLaneByRole(lanes, "pbl").name).toBe("PBL");
+    expect(findLaneByRole(lanes, "sbl").name).toBe("SBL");
+    expect(findLaneByRole(lanes, "close").name).toBe("Close");
+    expect(findLaneByRole(lanes, "drop").name).toBe("Drop");
   });
 });
 
 describe("canAcceptMore", () => {
   it("WIP制限なしのレーンは常に受け入れ可能", () => {
-    const lane = createLane({ id: "lane-1", name: "A" });
+    const lane = createLane({ id: "l1", name: "A" });
     expect(canAcceptMore(lane, 999)).toBe(true);
   });
 
   it("WIP制限未満なら受け入れ可能、以上なら不可", () => {
-    const lane = createLane({ id: "lane-1", name: "A", wipLimit: 2 });
-    expect(canAcceptMore(lane, 0)).toBe(true);
+    const lane = createLane({ id: "l1", name: "A", wipLimit: 2 });
     expect(canAcceptMore(lane, 1)).toBe(true);
     expect(canAcceptMore(lane, 2)).toBe(false);
-    expect(canAcceptMore(lane, 3)).toBe(false);
-  });
-});
-
-describe("findDefaultEntryLane / findDropLane", () => {
-  it("新規投入先レーンを返す", () => {
-    const lanes = createDefaultLanes();
-    expect(findDefaultEntryLane(lanes).name).toBe("未着手");
-  });
-
-  it("Drop先（進捗除外）レーンを返す", () => {
-    const lanes = createDefaultLanes();
-    expect(findDropLane(lanes)?.name).toBe("中断");
-  });
-
-  it("Drop先レーンがない場合はnullを返す", () => {
-    const lanes = [
-      createLane({ id: "lane-1", name: "A", isDefaultEntry: true }),
-    ];
-    expect(findDropLane(lanes)).toBeNull();
   });
 });

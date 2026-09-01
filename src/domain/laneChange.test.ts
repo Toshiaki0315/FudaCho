@@ -4,6 +4,7 @@ import { createDefaultLanes } from "./lane";
 import { changeLane, isDropped } from "./laneChange";
 import { createParentItem } from "./parentItem";
 
+// デフォルトレーン: lane-1=PBL, lane-5=Drop
 const lanes = createDefaultLanes();
 
 describe("changeLane", () => {
@@ -13,8 +14,8 @@ describe("changeLane", () => {
       summary: "設計する",
       laneId: "lane-1",
     });
-    const moved = changeLane(item, "lane-2");
-    expect(moved.laneId).toBe("lane-2");
+    const moved = changeLane(item, "lane-4");
+    expect(moved.laneId).toBe("lane-4");
     expect(moved.id).toBe("P-1");
   });
 
@@ -23,10 +24,9 @@ describe("changeLane", () => {
       id: "C-1",
       parentId: "P-1",
       description: "作業",
-      laneId: "lane-1",
+      laneId: "lane-2",
     });
-    const moved = changeLane(item, "lane-3");
-    expect(moved.laneId).toBe("lane-3");
+    expect(changeLane(item, "lane-3").laneId).toBe("lane-3");
   });
 
   it("元のアイテムは変更されない（イミュータブル）", () => {
@@ -35,7 +35,7 @@ describe("changeLane", () => {
       summary: "設計する",
       laneId: "lane-1",
     });
-    changeLane(item, "lane-3");
+    changeLane(item, "lane-4");
     expect(item.laneId).toBe("lane-1");
   });
 
@@ -47,7 +47,7 @@ describe("changeLane", () => {
       assignee: "野村",
       size: 5,
     });
-    const moved = changeLane(item, "lane-4");
+    const moved = changeLane(item, "lane-5");
     expect(moved.assignee).toBe("野村");
     expect(moved.size).toBe(5);
     expect(moved.summary).toBe("設計する");
@@ -55,14 +55,13 @@ describe("changeLane", () => {
 });
 
 describe("isDropped", () => {
-  it("進捗除外レーンにいるアイテムに対してtrueを返す（削除ではなくデータとして保持）", () => {
+  it("Dropレーンにいるアイテムに対してtrueを返す（削除ではなくデータとして保持）", () => {
     const item = createParentItem({
       id: "P-1",
       summary: "設計する",
       laneId: "lane-5",
     });
     expect(isDropped(item, lanes)).toBe(true);
-    // データはすべて保持され参照可能
     expect(item.summary).toBe("設計する");
   });
 

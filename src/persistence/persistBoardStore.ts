@@ -20,7 +20,12 @@ export async function startPersistence(
 ): Promise<() => void> {
   const loaded = await adapter.load();
   if (loaded !== null) {
-    store.getState().hydrate(loaded);
+    try {
+      store.getState().hydrate(loaded);
+    } catch (e) {
+      // 旧形式など読み込めない保存データは破棄して初期状態で起動する
+      console.error("保存データを読み込めなかったため初期状態で起動します:", e);
+    }
   }
   let timer: ReturnType<typeof setTimeout> | null = null;
   const unsubscribe = store.subscribe((state) => {

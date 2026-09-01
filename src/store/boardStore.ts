@@ -4,12 +4,7 @@ import {
   type ChildItem,
   type CreateChildItemInput,
 } from "../domain/childItem";
-import {
-  canAcceptMore,
-  findDefaultEntryLane,
-  findDropLane,
-  validateLanes,
-} from "../domain/lane";
+import { canAcceptMore, findLaneByRole, validateLanes } from "../domain/lane";
 import { changeLane } from "../domain/laneChange";
 import {
   createEmptyLaneOrder,
@@ -65,10 +60,12 @@ interface BoardState extends PersistedBoard {
   clearNotice: () => void;
   hydrate: (persisted: PersistedBoard) => void;
   addParent: (input: AddParentInput) => string;
-  addChild: (input: AddChildInput & { parentId: string }) => string;
+  addChild: (input: AddChildInput) => string;
   updateSettings: (settings: Settings) => void;
   updateParent: (itemId: string, patch: ParentItemPatch) => void;
   updateChild: (itemId: string, patch: ChildItemPatch) => void;
+  /** 移動できない場合はその理由、できる場合はnullを返す */
+  moveBlockReason: (itemId: string, toLaneId: string) => string | null;
   moveItem: (itemId: string, toLaneId: string, index?: number) => void;
   reorderLane: (laneId: string, fromIndex: number, toIndex: number) => void;
   handleDragEnd: (activeId: string, overId: string | null) => void;
@@ -97,34 +94,13 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   hydrate(persisted) {
     validateLanes(persisted.settings.lanes);
-    // 機能追加前に保存されたデータとの互換: comments / labels を補完する
-    const parents = Object.fromEntries(
-      Object.entries(persisted.parents).map(([id, parent]) => [
-        id,
-        {
-          ...parent,
-          labels: parent.labels ?? [],
-          ready: parent.ready ?? false,
-        },
-      ]),
-    );
-    const children = Object.fromEntries(
-      Object.entries(persisted.children).map(([id, child]) => [
-        id,
-        {
-          ...child,
-          comments: child.comments ?? [],
-          labels: child.labels ?? [],
-        },
-      ]),
-    );
-    set(selectPersisted({ ...persisted, parents, children }));
+    set(selectPersisted(persisted));
   },
 
   addParent(input) {
-    const entryLane = findDefaultEntryLane(get().settings.lanes);
+    const pblLane = findLaneByRole(get().settings.lanes, "pbl");
     const id = `P-${get().nextParentNumber}`;
-    const parent = createParentItem({ ...input, id, laneId: entryLane.id });
+    const parent = createParentItem({ ...input, id, laneId: pblLane.id });
     set((state) => ({
       parents: { ...state.parents, [id]: parent },
       laneOrder: insertIntoLane(state.laneOrder, parent.laneId, id),
@@ -134,19 +110,22 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   addChild(input) {
-    const parent = get().parents[input.parentId];
-    if (!parent) {
-      throw new Error(`親アイテム ${input.parentId} が見つかりません`);
+    const parentId = input.parentId ?? null;
+    const parent = parentId !== null ? get().parents[parentId] : null;
+    if (parentId !== null && !parent) {
+      throw new Error(`親アイテム ${parentId} が見つかりません`);
     }
-    const entryLane = findDefaultEntryLane(get().settings.lanes);
+    const sblLane = findLaneByRole(get().settings.lanes, "sbl");
     const id = `C-${get().nextChildNumber}`;
-    const child = createChildItem({ ...input, id, laneId: entryLane.id });
+    const child = createChildItem({ ...input, id, laneId: sblLane.id });
     set((state) => ({
       children: { ...state.children, [id]: child },
-      parents: {
-        ...state.parents,
-        [parent.id]: { ...parent, childIds: [...parent.childIds, id] },
-      },
+      parents: parent
+        ? {
+            ...state.parents,
+            [parent.id]: { ...parent, childIds: [...parent.childIds, id] },
+          }
+        : state.parents,
       laneOrder: insertIntoLane(state.laneOrder, child.laneId, id),
       nextChildNumber: state.nextChildNumber + 1,
     }));
@@ -205,21 +184,52 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     set((state) => ({ children: { ...state.children, [itemId]: updated } }));
   },
 
-  moveItem(itemId, toLaneId, index) {
+  moveBlockReason(itemId, toLaneId) {
     const { parents, children, settings, laneOrder } = get();
+    const parent = parents[itemId];
+    const child = children[itemId];
+    const item = parent ?? child;
+    const toLane = settings.lanes.find((lane) => lane.id === toLaneId);
+    if (!item || !toLane) {
+      return null;
+    }
+    if (item.laneId === toLaneId) {
+      // 同一レーン内の位置変更は常に可能
+      return null;
+    }
+    if (parent) {
+      if (toLane.role !== "close" && toLane.role !== "drop") {
+        return "親アイテムはCloseまたはDropレーンへのみ移動できます";
+      }
+      if (toLane.role === "close") {
+        const laneRoleById = new Map(
+          settings.lanes.map((lane) => [lane.id, lane.role]),
+        );
+        const hasOpenChild = parent.childIds.some((childId) => {
+          const role = laneRoleById.get(children[childId].laneId);
+          return role !== "close" && role !== "drop";
+        });
+        if (hasOpenChild) {
+          return "未完了の子アイテムがあるためCloseできません";
+        }
+      }
+    } else if (toLane.role === "pbl") {
+      return "子アイテムはPBLレーンへ移動できません";
+    }
+    if (!canAcceptMore(toLane, laneOrder[toLaneId].length)) {
+      return `レーン「${toLane.name}」はWIP制限（${toLane.wipLimit}）に達しているため移動できません`;
+    }
+    return null;
+  },
+
+  moveItem(itemId, toLaneId, index) {
+    const { parents, children } = get();
     if (!parents[itemId] && !children[itemId]) {
       throw new Error(`アイテム ${itemId} が見つかりません`);
     }
-    const toLane = settings.lanes.find((lane) => lane.id === toLaneId);
-    const isLaneChange = !laneOrder[toLaneId]?.includes(itemId);
-    if (
-      toLane &&
-      isLaneChange &&
-      !canAcceptMore(toLane, laneOrder[toLaneId].length)
-    ) {
-      throw new Error(
-        `レーン「${toLane.name}」はWIP制限（${toLane.wipLimit}）に達しています`,
-      );
+    const reason = get().moveBlockReason(itemId, toLaneId);
+    if (reason !== null) {
+      throw new Error(reason);
     }
     set((state) => {
       const laneOrder = moveToLane(state.laneOrder, itemId, toLaneId, index);
@@ -249,18 +259,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   handleDragEnd(activeId, overId) {
-    const { laneOrder, settings } = get();
+    const { laneOrder } = get();
     const action = resolveDragEnd(laneOrder, activeId, overId);
     if (action === null) {
       return;
     }
     if (action.type === "move") {
-      // WIP制限に達したレーンへのD&Dは移動せず、通知メッセージで知らせる
-      const toLane = settings.lanes.find((lane) => lane.id === action.toLaneId);
-      if (toLane && !canAcceptMore(toLane, laneOrder[action.toLaneId].length)) {
-        set({
-          notice: `レーン「${toLane.name}」はWIP制限（${toLane.wipLimit}）に達しているため移動できません`,
-        });
+      // 移動できないD&Dは適用せず、理由を通知する（ドラッグ操作を失敗にしない）
+      const reason = get().moveBlockReason(activeId, action.toLaneId);
+      if (reason !== null) {
+        set({ notice: reason });
         return;
       }
       get().moveItem(activeId, action.toLaneId, action.index);
@@ -276,11 +284,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   dropItem(itemId) {
     const { settings, parents, children, laneOrder } = get();
-    const dropLane = findDropLane(settings.lanes);
-    if (dropLane === null) {
-      set({ notice: "Drop先（進捗除外）のレーンがありません" });
-      return;
-    }
+    const dropLane = findLaneByRole(settings.lanes, "drop");
     // 親アイテムのDropは子アイテムにも波及する（Drop済みのものは除く）
     const candidateIds = [itemId, ...(parents[itemId]?.childIds ?? [])];
     const targets = candidateIds.filter((id) => {
@@ -322,14 +326,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       }
       // 子アイテムの削除は親のchildIdsからも取り除く
       const child = state.children[itemId];
-      if (child) {
+      if (child && child.parentId !== null) {
         const parent = nextParents[child.parentId];
-        const childIds = parent.childIds.filter((id) => id !== itemId);
         nextParents[child.parentId] = {
           ...parent,
-          childIds,
-          // 子がいなくなったらReady条件を満たさないため自動でNot Readyに戻す
-          ready: parent.ready && childIds.length > 0,
+          childIds: parent.childIds.filter((id) => id !== itemId),
         };
       }
       return { parents: nextParents, children: nextChildren, laneOrder };
@@ -343,9 +344,16 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         .filter((id) => parents[id] !== undefined)
         .map((id) => parents[id]),
     );
-    const orderedChildren = orderedParents.flatMap((parent) =>
-      parent.childIds.map((childId) => children[childId]),
-    );
+    const orderedChildren = [
+      ...orderedParents.flatMap((parent) =>
+        parent.childIds.map((childId) => children[childId]),
+      ),
+      ...settings.lanes.flatMap((lane) =>
+        laneOrder[lane.id]
+          .filter((id) => children[id]?.parentId === null)
+          .map((id) => children[id]),
+      ),
+    ];
     return generateMarkdown(
       {
         projectName: settings.projectName,
@@ -372,6 +380,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         const child = childrenById.get(childId)!;
         children[childId] = child;
         laneOrder = insertIntoLane(laneOrder, child.laneId, childId);
+      }
+    }
+    for (const child of snapshot.children) {
+      if (child.parentId === null) {
+        children[child.id] = child;
+        laneOrder = insertIntoLane(laneOrder, child.laneId, child.id);
       }
     }
     const maxNumber = (ids: string[], prefix: string) =>

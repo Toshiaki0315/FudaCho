@@ -205,7 +205,6 @@ describe("ParentItemDetail", () => {
       summary: "設計する",
       laneId: "lane-1",
       reason: "リリースに必要",
-      childIds: ["C-1"],
     });
     renderDetail({ item, onSave });
     const checkbox = screen.getByRole("checkbox", { name: "Ready" });
@@ -219,12 +218,16 @@ describe("ParentItemDetail", () => {
     );
   });
 
-  it("子アイテムがない場合はReadyチェックボックスが無効で条件ヒントが表示される", () => {
-    // buildItemは子アイテムなし
-    renderDetail();
+  it("理由が未記載の場合はReadyチェックボックスが無効で条件ヒントが表示される", () => {
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+    });
+    renderDetail({ item });
     expect(screen.getByRole("checkbox", { name: "Ready" })).toBeDisabled();
     expect(
-      screen.getByText(/子アイテムが1つ以上あり、概要と理由が記載されている/),
+      screen.getByText(/概要と理由が記載されている必要があります/),
     ).toBeInTheDocument();
   });
 
@@ -236,7 +239,6 @@ describe("ParentItemDetail", () => {
       summary: "設計する",
       laneId: "lane-1",
       reason: "リリースに必要",
-      childIds: ["C-1"],
       ready: true,
     });
     renderDetail({ item, onSave });
@@ -261,10 +263,48 @@ describe("ParentItemDetail", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("onAddChildを渡すと「＋子アイテムを追加」ボタンが表示されクリックで呼ばれる", async () => {
+  it("Readyのとき「＋子アイテムを追加」が有効でクリックで呼ばれる", async () => {
     const onAddChild = vi.fn();
     const user = userEvent.setup();
-    renderDetail({ onAddChild });
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+      reason: "理由",
+      ready: true,
+    });
+    renderDetail({ item, onAddChild });
+    await user.click(
+      screen.getByRole("button", { name: "＋子アイテムを追加" }),
+    );
+    expect(onAddChild).toHaveBeenCalledTimes(1);
+  });
+
+  it("Not Readyのとき「＋子アイテムを追加」は無効になる", () => {
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+      reason: "理由",
+      ready: false,
+    });
+    renderDetail({ item, onAddChild: vi.fn() });
+    expect(
+      screen.getByRole("button", { name: "＋子アイテムを追加" }),
+    ).toBeDisabled();
+  });
+
+  it("ダイアログ内でReadyにチェックを入れると保存前でも子アイテムを追加できる", async () => {
+    const onAddChild = vi.fn();
+    const user = userEvent.setup();
+    const item = createParentItem({
+      id: "P-1",
+      summary: "設計する",
+      laneId: "lane-1",
+      reason: "理由",
+    });
+    renderDetail({ item, onAddChild });
+    await user.click(screen.getByRole("checkbox", { name: "Ready" }));
     await user.click(
       screen.getByRole("button", { name: "＋子アイテムを追加" }),
     );

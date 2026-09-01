@@ -9,9 +9,7 @@ export function changeLane<T extends HasLane>(item: T, toLaneId: string): T {
   return { ...item, laneId: toLaneId };
 }
 
-/** Dropは削除ではなく、進捗除外レーンにいる状態として扱う。 */
+/** Dropは削除ではなく、Dropレーンにいる状態として扱う。 */
 export function isDropped(item: HasLane, lanes: readonly Lane[]): boolean {
-  return (
-    lanes.find((lane) => lane.id === item.laneId)?.excludedFromProgress ?? false
-  );
+  return lanes.find((lane) => lane.id === item.laneId)?.role === "drop";
 }

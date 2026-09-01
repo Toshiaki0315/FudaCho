@@ -9,15 +9,9 @@ describe("KanbanBoard", () => {
   it("レーン設定に基づいて列を動的に生成する", () => {
     const { lanes } = createDefaultSettings();
     render(<KanbanBoard lanes={lanes} />);
-    const columns = screen.getAllByRole("region");
-    expect(columns).toHaveLength(5);
-  });
-
-  it("各列にレーンの表示名が見出しとして表示される", () => {
-    const { lanes } = createDefaultSettings();
-    render(<KanbanBoard lanes={lanes} />);
-    for (const name of ["未着手", "作業中", "完了", "クローズ", "中断"]) {
-      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+    expect(screen.getAllByRole("region")).toHaveLength(5);
+    for (const name of ["PBL", "SBL", "作業中", "Close", "Drop"]) {
+      expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
   });
 
@@ -25,102 +19,65 @@ describe("KanbanBoard", () => {
     const { lanes } = createDefaultSettings();
     render(<KanbanBoard lanes={lanes} />);
     const headings = screen.getAllByRole("heading").map((h) => h.textContent);
-    expect(headings).toEqual(["未着手", "作業中", "完了", "クローズ", "中断"]);
+    expect(headings).toEqual(["PBL", "SBL", "作業中", "Close", "Drop"]);
   });
 
-  it("カスタムレーン設定（列数の増減・名前変更）にも対応する", () => {
+  it("PBLレーンにonAddParentの「＋新規作成」ボタンが表示される", async () => {
+    const onAddParent = vi.fn();
+    const { lanes } = createDefaultSettings();
     render(
       <KanbanBoard
-        lanes={[
-          createLane({ id: "lane-1", name: "やること", isDefaultEntry: true }),
-          createLane({ id: "lane-2", name: "おわった" }),
-        ]}
+        lanes={lanes}
+        onAddParent={onAddParent}
+        onAddChild={vi.fn()}
       />,
     );
-    expect(screen.getAllByRole("region")).toHaveLength(2);
-    expect(
-      screen.getByRole("heading", { name: "やること" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "おわった" }),
-    ).toBeInTheDocument();
+    const pblLane = screen.getByRole("region", { name: "PBL" });
+    await userEvent
+      .setup()
+      .click(within(pblLane).getByRole("button", { name: "＋新規作成" }));
+    expect(onAddParent).toHaveBeenCalledTimes(1);
   });
 
-  it("onAddItemを渡すと投入先レーンに「＋新規作成」ボタンが表示される", async () => {
-    const onAddItem = vi.fn();
+  it("SBLレーンにonAddChildの「＋新規作成」ボタンが表示される", async () => {
+    const onAddChild = vi.fn();
     const { lanes } = createDefaultSettings();
-    render(<KanbanBoard lanes={lanes} onAddItem={onAddItem} />);
-    const entryLane = screen.getByRole("region", { name: "未着手" });
-    const button = within(entryLane).getByRole("button", {
-      name: "＋新規作成",
-    });
-    await userEvent.setup().click(button);
-    expect(onAddItem).toHaveBeenCalledTimes(1);
+    render(
+      <KanbanBoard
+        lanes={lanes}
+        onAddParent={vi.fn()}
+        onAddChild={onAddChild}
+      />,
+    );
+    const sblLane = screen.getByRole("region", { name: "SBL" });
+    await userEvent
+      .setup()
+      .click(within(sblLane).getByRole("button", { name: "＋新規作成" }));
+    expect(onAddChild).toHaveBeenCalledTimes(1);
   });
 
-  it("「＋新規作成」ボタンは投入先レーン以外には表示されない", () => {
+  it("新規作成ボタンはPBLとSBLのみに表示される", () => {
     const { lanes } = createDefaultSettings();
-    render(<KanbanBoard lanes={lanes} onAddItem={vi.fn()} />);
+    render(
+      <KanbanBoard lanes={lanes} onAddParent={vi.fn()} onAddChild={vi.fn()} />,
+    );
     expect(screen.getAllByRole("button", { name: "＋新規作成" })).toHaveLength(
-      1,
+      2,
     );
+    for (const name of ["作業中", "Close", "Drop"]) {
+      const lane = screen.getByRole("region", { name });
+      expect(
+        within(lane).queryByRole("button", { name: "＋新規作成" }),
+      ).not.toBeInTheDocument();
+    }
   });
 
-  it("投入先が2番目のレーンでもそのレーンにボタンが表示される", () => {
-    render(
-      <KanbanBoard
-        lanes={[
-          createLane({ id: "lane-1", name: "完了済み" }),
-          createLane({ id: "lane-2", name: "受付", isDefaultEntry: true }),
-        ]}
-        onAddItem={vi.fn()}
-      />,
-    );
-    const entryLane = screen.getByRole("region", { name: "受付" });
-    expect(
-      within(entryLane).getByRole("button", { name: "＋新規作成" }),
-    ).toBeInTheDocument();
-  });
-
-  it("onAddItem未指定の場合はボタンを表示しない", () => {
+  it("ハンドラ未指定の場合はボタンを表示しない", () => {
     const { lanes } = createDefaultSettings();
     render(<KanbanBoard lanes={lanes} />);
     expect(
       screen.queryByRole("button", { name: "＋新規作成" }),
     ).not.toBeInTheDocument();
-  });
-
-  it("laneCountsを渡すとレーンヘッダーに件数を表示する", () => {
-    const { lanes } = createDefaultSettings();
-    render(<KanbanBoard lanes={lanes} laneCounts={{ "lane-1": 3 }} />);
-    const todoLane = screen.getByRole("region", { name: "未着手" });
-    expect(within(todoLane).getByText("3")).toBeInTheDocument();
-  });
-
-  it("WIP制限付きレーンは「件数 / 制限」を表示する", () => {
-    const lanes = [
-      createLane({
-        id: "lane-1",
-        name: "作業中",
-        wipLimit: 5,
-        isDefaultEntry: true,
-      }),
-    ];
-    render(<KanbanBoard lanes={lanes} laneCounts={{ "lane-1": 2 }} />);
-    expect(screen.getByText("2 / 5")).toBeInTheDocument();
-  });
-
-  it("WIP制限超過のレーンには超過スタイルが付く", () => {
-    const lanes = [
-      createLane({
-        id: "lane-1",
-        name: "作業中",
-        wipLimit: 1,
-        isDefaultEntry: true,
-      }),
-    ];
-    render(<KanbanBoard lanes={lanes} laneCounts={{ "lane-1": 2 }} />);
-    expect(screen.getByText("2 / 1")).toHaveClass("wip-exceeded");
   });
 
   it("laneContentで各レーンに内容を描画できる", () => {
@@ -131,7 +88,26 @@ describe("KanbanBoard", () => {
         laneContent={(laneId) => <p>{laneId}のカード</p>}
       />,
     );
-    const todoLane = screen.getByRole("region", { name: "未着手" });
-    expect(within(todoLane).getByText("lane-1のカード")).toBeInTheDocument();
+    const pblLane = screen.getByRole("region", { name: "PBL" });
+    expect(within(pblLane).getByText("lane-1のカード")).toBeInTheDocument();
+  });
+
+  it("laneCountsを渡すとレーンヘッダーに件数を表示する", () => {
+    const { lanes } = createDefaultSettings();
+    render(<KanbanBoard lanes={lanes} laneCounts={{ "lane-1": 3 }} />);
+    const pblLane = screen.getByRole("region", { name: "PBL" });
+    expect(within(pblLane).getByText("3")).toBeInTheDocument();
+  });
+
+  it("WIP制限付きレーンは「件数 / 制限」を表示し、超過時は超過スタイルが付く", () => {
+    const lanes = [
+      createLane({ id: "lane-1", name: "PBL", role: "pbl" }),
+      createLane({ id: "lane-2", name: "SBL", role: "sbl" }),
+      createLane({ id: "lane-3", name: "作業中", wipLimit: 1 }),
+      createLane({ id: "lane-4", name: "Close", role: "close" }),
+      createLane({ id: "lane-5", name: "Drop", role: "drop" }),
+    ];
+    render(<KanbanBoard lanes={lanes} laneCounts={{ "lane-3": 2 }} />);
+    expect(screen.getByText("2 / 1")).toHaveClass("wip-exceeded");
   });
 });

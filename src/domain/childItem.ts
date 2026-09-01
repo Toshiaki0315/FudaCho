@@ -2,7 +2,8 @@ import { validateLabels } from "./labels";
 
 export interface ChildItem {
   id: string;
-  parentId: string;
+  /** 親を持たない子アイテムはnull */
+  parentId: string | null;
   description: string;
   assignee: string;
   estimatedHours: number | null;
@@ -17,7 +18,7 @@ export interface ChildItem {
 
 export interface CreateChildItemInput {
   id: string;
-  parentId: string;
+  parentId?: string | null;
   description: string;
   laneId: string;
   assignee?: string;
@@ -34,7 +35,7 @@ export function createChildItem(input: CreateChildItemInput): ChildItem {
     throw new Error("IDは必須です");
   }
   if (input.parentId === "") {
-    throw new Error("親IDは必須です");
+    throw new Error("親IDには空文字を指定できません（親なしはnull）");
   }
   if (input.laneId === "") {
     throw new Error("レーンIDは必須です");
@@ -51,7 +52,7 @@ export function createChildItem(input: CreateChildItemInput): ChildItem {
   }
   return {
     id: input.id,
-    parentId: input.parentId,
+    parentId: input.parentId ?? null,
     description: input.description,
     assignee: input.assignee ?? "",
     estimatedHours,

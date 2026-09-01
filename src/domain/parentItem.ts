@@ -35,17 +35,12 @@ export interface ParentItem {
   ready: boolean;
 }
 
-/** Readyにできる条件を満たしているか。 */
+/** Readyにできる条件（概要と理由が記載されていること）を満たしているか。 */
 export function isReadyEligible(input: {
   summary: string;
   reason: string;
-  childIds: readonly string[];
 }): boolean {
-  return (
-    input.summary.trim() !== "" &&
-    input.reason.trim() !== "" &&
-    input.childIds.length > 0
-  );
+  return input.summary.trim() !== "" && input.reason.trim() !== "";
 }
 
 export function isValidSize(value: unknown): value is Size {
@@ -82,14 +77,10 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
   const childIds = input.childIds ?? [];
   if (
     ready &&
-    !isReadyEligible({
-      summary: input.summary,
-      reason: input.reason ?? "",
-      childIds,
-    })
+    !isReadyEligible({ summary: input.summary, reason: input.reason ?? "" })
   ) {
     throw new Error(
-      "Readyにするには、子アイテムが1つ以上あり、概要と理由が記載されている必要があります",
+      "Readyにするには、概要と理由が記載されている必要があります",
     );
   }
   if (!isValidSize(size)) {

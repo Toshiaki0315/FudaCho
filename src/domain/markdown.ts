@@ -3,7 +3,7 @@ import {
   type ChildItem,
   type CreateChildItemInput,
 } from "./childItem";
-import { createLane, findDefaultEntryLane, type Lane } from "./lane";
+import { createLane, findLaneByRole, type Lane, type LaneRole } from "./lane";
 import {
   createParentItem,
   isValidSize,
@@ -22,25 +22,22 @@ export interface ParsedBoard extends BoardSnapshot {
   lanes: Lane[] | null;
 }
 
+const ROLE_LABELS: Record<Exclude<LaneRole, "free">, string> = {
+  pbl: "PBL",
+  sbl: "SBL",
+  close: "Close",
+  drop: "Drop",
+};
+
+const PARENTLESS_SECTION = "## 親なし子アイテム";
+
 function laneDefLine(lane: Lane): string {
   const attrs: string[] = [];
-  if (lane.isDefaultEntry) {
-    attrs.push("投入先");
-  }
-  if (lane.hasDropAction) {
-    attrs.push("Drop操作");
-  }
-  if (lane.countsAsDone) {
-    attrs.push("完了扱い");
-  }
-  if (lane.excludedFromProgress) {
-    attrs.push("進捗除外");
+  if (lane.role !== "free") {
+    attrs.push(`役割: ${ROLE_LABELS[lane.role]}`);
   }
   if (lane.wipLimit !== null) {
     attrs.push(`WIP: ${lane.wipLimit}`);
-  }
-  if (lane.moveTargets !== "all") {
-    attrs.push(`移動先: ${lane.moveTargets.join(";")}`);
   }
   const attrText = attrs.length > 0 ? ` (${attrs.join(", ")})` : "";
   return `- ${lane.id}: ${lane.name}${attrText}`;
@@ -56,18 +53,17 @@ function parseLaneDefLine(line: string, idAndRest: string): Lane {
     name = metaMatch[1];
     input.name = name;
     for (const attr of metaMatch[2].split(", ")) {
-      if (attr === "投入先") {
-        input.isDefaultEntry = true;
-      } else if (attr === "Drop操作") {
-        input.hasDropAction = true;
-      } else if (attr === "完了扱い") {
-        input.countsAsDone = true;
-      } else if (attr === "進捗除外") {
-        input.excludedFromProgress = true;
+      if (attr.startsWith("役割: ")) {
+        const label = attr.slice("役割: ".length);
+        const role = (
+          Object.entries(ROLE_LABELS) as [Exclude<LaneRole, "free">, string][]
+        ).find(([, l]) => l === label)?.[0];
+        if (!role) {
+          throw new Error(`不正な役割です: ${label}`);
+        }
+        input.role = role;
       } else if (attr.startsWith("WIP: ")) {
         input.wipLimit = Number(attr.slice("WIP: ".length));
-      } else if (attr.startsWith("移動先: ")) {
-        input.moveTargets = attr.slice("移動先: ".length).split(";");
       } else {
         throw new Error(`不明なレーン属性です: ${attr}（行: ${line}）`);
       }
@@ -92,14 +88,14 @@ function laneByName(lanes: readonly Lane[], name: string): Lane {
   return lane;
 }
 
-function childLine(child: ChildItem, lanes: readonly Lane[]): string {
+function childLines(child: ChildItem, lanes: readonly Lane[]): string[] {
   const lane = lanes.find((l) => l.id === child.laneId);
   if (!lane) {
     throw new Error(`レーン ${child.laneId} が見つかりません`);
   }
-  const checked = lane.countsAsDone;
+  const checked = lane.role === "close";
   const meta: string[] = [];
-  if (!lane.isDefaultEntry) {
+  if (lane.role !== "sbl") {
     meta.push(`レーン: ${lane.name}`);
   }
   if (child.assignee !== "") {
@@ -121,7 +117,10 @@ function childLine(child: ChildItem, lanes: readonly Lane[]): string {
     meta.push(`終了: ${child.endDate}`);
   }
   const metaText = meta.length > 0 ? ` (${meta.join(", ")})` : "";
-  return `- [${checked ? "x" : " "}] ${child.id}: ${child.description}${metaText}`;
+  return [
+    `- [${checked ? "x" : " "}] ${child.id}: ${child.description}${metaText}`,
+    ...child.comments.map((comment) => `  - ${comment}`),
+  ];
 }
 
 export function generateMarkdown(
@@ -168,11 +167,15 @@ export function generateMarkdown(
     if (children.length > 0) {
       lines.push("", "### 子アイテム");
       for (const child of children) {
-        lines.push(childLine(child, lanes));
-        for (const comment of child.comments) {
-          lines.push(`  - ${comment}`);
-        }
+        lines.push(...childLines(child, lanes));
       }
+    }
+  }
+  const parentless = snapshot.children.filter((c) => c.parentId === null);
+  if (parentless.length > 0) {
+    lines.push("", PARENTLESS_SECTION);
+    for (const child of parentless) {
+      lines.push(...childLines(child, lanes));
     }
   }
   return lines.join("\n") + "\n";
@@ -187,7 +190,7 @@ interface ParsingParent {
 
 function parseChildLine(
   line: string,
-  parentId: string,
+  parentId: string | null,
   checked: boolean,
   idAndRest: string,
   lanes: readonly Lane[],
@@ -195,13 +198,11 @@ function parseChildLine(
   const colon = idAndRest.indexOf(": ");
   const id = idAndRest.slice(0, colon);
   let description = idAndRest.slice(colon + 2);
-  const defaultLane = findDefaultEntryLane([...lanes]);
-  const doneLane = lanes.find((l) => l.countsAsDone);
   const input: CreateChildItemInput = {
     id,
     parentId,
     description,
-    laneId: defaultLane.id,
+    laneId: findLaneByRole(lanes, "sbl").id,
   };
   const metaMatch = description.match(/^(.*) \(([^()]*)\)$/);
   let laneId: string | null = null;
@@ -235,8 +236,8 @@ function parseChildLine(
   }
   if (laneId !== null) {
     input.laneId = laneId;
-  } else if (checked && doneLane) {
-    input.laneId = doneLane.id;
+  } else if (checked) {
+    input.laneId = findLaneByRole(lanes, "close").id;
   }
   return input;
 }
@@ -250,13 +251,14 @@ export function parseMarkdown(
   let parsedLanes: Lane[] | null = null;
   let lastChildIndex: number | null = null;
   let inLaneSection = false;
+  let inParentless = false;
   const parsingParents: ParsingParent[] = [];
   const children: ChildItem[] = [];
 
   const effectiveLanes = (): readonly Lane[] => parsedLanes ?? fallbackLanes;
 
   const currentParent = (): ParsingParent | null =>
-    parsingParents.length > 0
+    !inParentless && parsingParents.length > 0
       ? parsingParents[parsingParents.length - 1]
       : null;
 
@@ -271,15 +273,22 @@ export function parseMarkdown(
       parsedLanes = [];
       continue;
     }
+    if (line === PARENTLESS_SECTION) {
+      inLaneSection = false;
+      inParentless = true;
+      lastChildIndex = null;
+      continue;
+    }
     const h2 = line.match(/^## (\S+): (.+)$/);
     if (h2) {
       inLaneSection = false;
+      inParentless = false;
       lastChildIndex = null;
       parsingParents.push({
         input: {
           id: h2[1],
           summary: h2[2],
-          laneId: findDefaultEntryLane([...effectiveLanes()]).id,
+          laneId: findLaneByRole(effectiveLanes(), "pbl").id,
         },
         comments: [],
         childIds: [],
@@ -295,27 +304,26 @@ export function parseMarkdown(
       continue;
     }
     const parent = currentParent();
-    if (!parent) {
-      continue;
-    }
     const childMatch = line.match(/^- \[( |x)\] (\S+: .+)$/);
-    if (childMatch) {
+    if (childMatch && (parent || inParentless)) {
       const input = parseChildLine(
         line,
-        parent.input.id,
+        parent ? parent.input.id : null,
         childMatch[1] === "x",
         childMatch[2],
         effectiveLanes(),
       );
       children.push(createChildItem(input));
-      parent.childIds.push(input.id);
-      // 以降の字下げリストはこの子アイテムのコメントとして扱う
-      parent.inComments = false;
+      parent?.childIds.push(input.id);
+      if (parent) {
+        // 以降の字下げリストはこの子アイテムのコメントとして扱う
+        parent.inComments = false;
+      }
       lastChildIndex = children.length - 1;
       continue;
     }
     const commentMatch = line.match(/^ {2}- (.+)$/);
-    if (commentMatch && parent.inComments) {
+    if (commentMatch && parent?.inComments) {
       parent.comments.push(commentMatch[1]);
       continue;
     }
@@ -325,6 +333,9 @@ export function parseMarkdown(
         ...child,
         comments: [...child.comments, commentMatch[1]],
       };
+      continue;
+    }
+    if (!parent) {
       continue;
     }
     const field = line.match(/^- ([^:]+):(?: (.*))?$/);

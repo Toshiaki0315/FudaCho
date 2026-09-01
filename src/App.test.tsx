@@ -17,16 +17,16 @@ describe("App", () => {
     render(<App />);
     const lanes = screen.getAllByRole("region");
     expect(lanes).toHaveLength(5);
-    for (const name of ["未着手", "作業中", "完了", "クローズ", "中断"]) {
+    for (const name of ["PBL", "SBL", "作業中", "Close", "Drop"]) {
       expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
   });
 
-  it("最初のレーンに「＋新規作成」ボタンを表示する", () => {
+  it("PBLとSBLに「＋新規作成」ボタンを表示する", () => {
     render(<App />);
-    expect(
-      screen.getByRole("button", { name: "＋新規作成" }),
-    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "＋新規作成" })).toHaveLength(
+      2,
+    );
   });
 
   it("エクスポートボタンで現在のボードのマークダウンが表示される", async () => {
@@ -49,28 +49,27 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { name: "取込プロジェクト" }),
     ).toBeInTheDocument();
-    const todoLane = screen.getByRole("region", { name: "未着手" });
-    expect(within(todoLane).getByText("取り込んだタスク")).toBeInTheDocument();
+    const pblLane = screen.getByRole("region", { name: "PBL" });
+    expect(within(pblLane).getByText("取り込んだタスク")).toBeInTheDocument();
   });
 
-  it("設定でプロジェクト名とレーン構成を変更できる", async () => {
+  it("設定でプロジェクト名の変更と自由レーンの追加ができる", async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole("button", { name: "設定" }));
     const projectName = screen.getByLabelText("プロジェクト名");
     await user.clear(projectName);
     await user.type(projectName, "改名プロジェクト");
-    const rows = screen.getAllByRole("listitem");
-    await user.click(within(rows[3]).getByRole("button", { name: "削除" }));
+    await user.click(screen.getByRole("button", { name: "＋レーンを追加" }));
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "改名プロジェクト" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("region")).toHaveLength(4);
+    expect(screen.getAllByRole("region")).toHaveLength(6);
     expect(
-      screen.queryByRole("region", { name: "クローズ" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("region", { name: "新しいレーン" }),
+    ).toBeInTheDocument();
   });
 
   it("不正なマークダウンのインポートはエラーを表示する", async () => {

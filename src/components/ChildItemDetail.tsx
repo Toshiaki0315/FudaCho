@@ -83,7 +83,7 @@ export function ChildItemDetail({
       >
         <header className="item-detail-header">
           <span className="item-id">{item.id}</span>
-          <span className="item-parent-id">親: {item.parentId}</span>
+          <span className="item-parent-id">親: {item.parentId ?? "なし"}</span>
           <span className="item-status">{laneName}</span>
         </header>
         <div className="item-detail-body">

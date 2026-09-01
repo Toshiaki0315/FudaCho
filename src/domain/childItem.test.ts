@@ -55,6 +55,15 @@ describe("createChildItem", () => {
     expect(item.labels).toEqual(["フロント"]);
   });
 
+  it("親を持たない子アイテムを作成できる（parentId: null）", () => {
+    const item = createChildItem({
+      id: "C-1",
+      description: "独立タスク",
+      laneId: "lane-2",
+    });
+    expect(item.parentId).toBeNull();
+  });
+
   it("不正なラベル（区切り文字入り）はエラーになる", () => {
     expect(() =>
       createChildItem({
