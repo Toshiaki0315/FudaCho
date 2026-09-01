@@ -477,6 +477,52 @@ describe("boardStore", () => {
       expect(useBoardStore.getState().parents["P-1"].summary).toBe("既存");
     });
 
+    it("レーン設定セクションがあればレーン構成も置き換えられる", () => {
+      useBoardStore.getState().importMarkdown(`# レーン付き
+
+## レーン設定
+- lane-1: 受付 (投入先)
+- lane-2: 済 (完了扱い)
+
+## P-1: 設計する
+- レーン: 済
+`);
+      const state = useBoardStore.getState();
+      expect(state.settings.lanes.map((l) => l.name)).toEqual(["受付", "済"]);
+      expect(Object.keys(state.laneOrder)).toEqual(["lane-1", "lane-2"]);
+      expect(state.parents["P-1"].laneId).toBe("lane-2");
+    });
+
+    it("不正なレーン設定（投入先なし）のインポートはエラーになる", () => {
+      expect(() =>
+        useBoardStore.getState().importMarkdown(`# P
+
+## レーン設定
+- lane-1: 受付
+`),
+      ).toThrow(/投入先/);
+    });
+
+    it("レーン設定込みのエクスポートを再インポートするとレーンも復元される（ラウンドトリップ）", () => {
+      const { settings } = useBoardStore.getState();
+      useBoardStore.getState().updateSettings({
+        projectName: settings.projectName,
+        lanes: settings.lanes.map((lane) =>
+          lane.id === "lane-2"
+            ? { ...lane, name: "進行中", wipLimit: 4 }
+            : lane,
+        ),
+      });
+      const exported = useBoardStore.getState().exportMarkdown();
+      useBoardStore.getState().reset();
+      useBoardStore.getState().importMarkdown(exported);
+      const lane2 = useBoardStore
+        .getState()
+        .settings.lanes.find((l) => l.id === "lane-2");
+      expect(lane2).toMatchObject({ name: "進行中", wipLimit: 4 });
+      expect(useBoardStore.getState().exportMarkdown()).toBe(exported);
+    });
+
     it("エクスポートしたマークダウンを再インポートできる（ラウンドトリップ）", () => {
       const store = useBoardStore.getState();
       store.addParent({ summary: "設計する", size: 8, assignee: "野村" });

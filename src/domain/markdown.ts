@@ -3,7 +3,7 @@ import {
   type ChildItem,
   type CreateChildItemInput,
 } from "./childItem";
-import { findDefaultEntryLane, type Lane } from "./lane";
+import { createLane, findDefaultEntryLane, type Lane } from "./lane";
 import {
   createParentItem,
   isValidSize,
@@ -15,6 +15,65 @@ export interface BoardSnapshot {
   projectName: string;
   parents: ParentItem[];
   children: ChildItem[];
+}
+
+/** パース結果。lanes はレーン設定セクションがあった場合のみ（なければnull）。 */
+export interface ParsedBoard extends BoardSnapshot {
+  lanes: Lane[] | null;
+}
+
+function laneDefLine(lane: Lane): string {
+  const attrs: string[] = [];
+  if (lane.isDefaultEntry) {
+    attrs.push("投入先");
+  }
+  if (lane.hasDropAction) {
+    attrs.push("Drop操作");
+  }
+  if (lane.countsAsDone) {
+    attrs.push("完了扱い");
+  }
+  if (lane.excludedFromProgress) {
+    attrs.push("進捗除外");
+  }
+  if (lane.wipLimit !== null) {
+    attrs.push(`WIP: ${lane.wipLimit}`);
+  }
+  if (lane.moveTargets !== "all") {
+    attrs.push(`移動先: ${lane.moveTargets.join(";")}`);
+  }
+  const attrText = attrs.length > 0 ? ` (${attrs.join(", ")})` : "";
+  return `- ${lane.id}: ${lane.name}${attrText}`;
+}
+
+function parseLaneDefLine(line: string, idAndRest: string): Lane {
+  const colon = idAndRest.indexOf(": ");
+  const id = idAndRest.slice(0, colon);
+  let name = idAndRest.slice(colon + 2);
+  const input: Parameters<typeof createLane>[0] = { id, name };
+  const metaMatch = name.match(/^(.*) \(([^()]*)\)$/);
+  if (metaMatch) {
+    name = metaMatch[1];
+    input.name = name;
+    for (const attr of metaMatch[2].split(", ")) {
+      if (attr === "投入先") {
+        input.isDefaultEntry = true;
+      } else if (attr === "Drop操作") {
+        input.hasDropAction = true;
+      } else if (attr === "完了扱い") {
+        input.countsAsDone = true;
+      } else if (attr === "進捗除外") {
+        input.excludedFromProgress = true;
+      } else if (attr.startsWith("WIP: ")) {
+        input.wipLimit = Number(attr.slice("WIP: ".length));
+      } else if (attr.startsWith("移動先: ")) {
+        input.moveTargets = attr.slice("移動先: ".length).split(";");
+      } else {
+        throw new Error(`不明なレーン属性です: ${attr}（行: ${line}）`);
+      }
+    }
+  }
+  return createLane(input);
 }
 
 function laneNameOf(lanes: readonly Lane[], laneId: string): string {
@@ -67,6 +126,10 @@ export function generateMarkdown(
   lanes: readonly Lane[],
 ): string {
   const lines: string[] = [`# ${snapshot.projectName}`];
+  lines.push("", "## レーン設定");
+  for (const lane of lanes) {
+    lines.push(laneDefLine(lane));
+  }
   for (const parent of snapshot.parents) {
     lines.push("", `## ${parent.id}: ${parent.summary}`);
     lines.push(`- レーン: ${laneNameOf(lanes, parent.laneId)}`);
@@ -163,13 +226,16 @@ function parseChildLine(
 
 export function parseMarkdown(
   markdown: string,
-  lanes: readonly Lane[],
-): BoardSnapshot {
+  fallbackLanes: readonly Lane[],
+): ParsedBoard {
   const lines = markdown.split("\n");
   let projectName: string | null = null;
+  let parsedLanes: Lane[] | null = null;
+  let inLaneSection = false;
   const parsingParents: ParsingParent[] = [];
   const children: ChildItem[] = [];
-  const defaultLane = findDefaultEntryLane([...lanes]);
+
+  const effectiveLanes = (): readonly Lane[] => parsedLanes ?? fallbackLanes;
 
   const currentParent = (): ParsingParent | null =>
     parsingParents.length > 0
@@ -182,14 +248,31 @@ export function parseMarkdown(
       projectName = h1[1];
       continue;
     }
+    if (line === "## レーン設定") {
+      inLaneSection = true;
+      parsedLanes = [];
+      continue;
+    }
     const h2 = line.match(/^## (\S+): (.+)$/);
     if (h2) {
+      inLaneSection = false;
       parsingParents.push({
-        input: { id: h2[1], summary: h2[2], laneId: defaultLane.id },
+        input: {
+          id: h2[1],
+          summary: h2[2],
+          laneId: findDefaultEntryLane([...effectiveLanes()]).id,
+        },
         comments: [],
         childIds: [],
         inComments: false,
       });
+      continue;
+    }
+    if (inLaneSection) {
+      const laneDef = line.match(/^- (\S+: .+)$/);
+      if (laneDef) {
+        parsedLanes!.push(parseLaneDefLine(line, laneDef[1]));
+      }
       continue;
     }
     const parent = currentParent();
@@ -203,7 +286,7 @@ export function parseMarkdown(
         parent.input.id,
         childMatch[1] === "x",
         childMatch[2],
-        lanes,
+        effectiveLanes(),
       );
       children.push(createChildItem(input));
       parent.childIds.push(input.id);
@@ -219,7 +302,7 @@ export function parseMarkdown(
       const [, key, value = ""] = field;
       parent.inComments = false;
       if (key === "レーン") {
-        parent.input.laneId = laneByName(lanes, value).id;
+        parent.input.laneId = laneByName(effectiveLanes(), value).id;
       } else if (key === "サイズ") {
         const size = value === "♾️" ? value : Number(value);
         if (!isValidSize(size)) {
@@ -253,5 +336,5 @@ export function parseMarkdown(
       childIds: p.childIds,
     }),
   );
-  return { projectName, parents, children };
+  return { projectName, parents, children, lanes: parsedLanes };
 }

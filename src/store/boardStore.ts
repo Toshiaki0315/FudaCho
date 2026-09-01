@@ -249,9 +249,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   importMarkdown(markdown) {
     const { settings } = get();
     const snapshot = parseMarkdown(markdown, settings.lanes);
+    const lanes = snapshot.lanes ?? settings.lanes;
+    validateLanes(lanes);
     const parents: Record<string, ParentItem> = {};
     const children: Record<string, ChildItem> = {};
-    let laneOrder = createEmptyLaneOrder(settings.lanes.map((l) => l.id));
+    let laneOrder = createEmptyLaneOrder(lanes.map((l) => l.id));
     const childrenById = new Map(snapshot.children.map((c) => [c.id, c]));
     for (const parent of snapshot.parents) {
       parents[parent.id] = parent;
@@ -267,14 +269,14 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         const match = id.match(new RegExp(`^${prefix}-(\\d+)$`));
         return match ? Math.max(max, Number(match[1])) : max;
       }, 0);
-    set((state) => ({
-      settings: { ...state.settings, projectName: snapshot.projectName },
+    set({
+      settings: { projectName: snapshot.projectName, lanes },
       parents,
       children,
       laneOrder,
       nextParentNumber: maxNumber(Object.keys(parents), "P") + 1,
       nextChildNumber: maxNumber(Object.keys(children), "C") + 1,
-    }));
+    });
   },
 
   reset() {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createChildItem } from "./childItem";
-import { createDefaultLanes } from "./lane";
+import { createDefaultLanes, createLane } from "./lane";
 import { generateMarkdown, parseMarkdown } from "./markdown";
 import { createParentItem } from "./parentItem";
 
@@ -14,6 +14,60 @@ describe("generateMarkdown", () => {
       lanes,
     );
     expect(md).toContain("# 札帖");
+  });
+
+  it("レーン設定セクションを属性付きで出力する", () => {
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [], children: [] },
+      lanes,
+    );
+    expect(md).toContain("## レーン設定");
+    expect(md).toContain("- lane-1: 未着手 (投入先)");
+    expect(md).toContain("- lane-2: 作業中 (Drop操作)");
+    expect(md).toContain("- lane-3: 完了 (完了扱い)");
+    expect(md).toContain("- lane-4: クローズ (完了扱い)");
+    expect(md).toContain("- lane-5: 中断 (進捗除外)");
+  });
+
+  it("WIP制限付きレーンはWIP属性も出力する", () => {
+    const withWip = lanes.map((lane) =>
+      lane.id === "lane-2" ? { ...lane, wipLimit: 3 } : lane,
+    );
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [], children: [] },
+      withWip,
+    );
+    expect(md).toContain("- lane-2: 作業中 (Drop操作, WIP: 3)");
+  });
+
+  it("移動先制限付きレーンは移動先属性込みでラウンドトリップできる", () => {
+    const customLanes = [
+      createLane({
+        id: "lane-1",
+        name: "受付",
+        isDefaultEntry: true,
+        moveTargets: ["lane-2", "lane-3"],
+      }),
+      createLane({ id: "lane-2", name: "済", countsAsDone: true }),
+      createLane({ id: "lane-3", name: "破棄", excludedFromProgress: true }),
+    ];
+    const md = generateMarkdown(
+      { projectName: "P", parents: [], children: [] },
+      customLanes,
+    );
+    expect(md).toContain("- lane-1: 受付 (投入先, 移動先: lane-2;lane-3)");
+    expect(parseMarkdown(md, lanes).lanes).toEqual(customLanes);
+  });
+
+  it("属性のないレーンは名前のみ出力する", () => {
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [], children: [] },
+      [
+        createLane({ id: "lane-1", name: "受付", isDefaultEntry: true }),
+        createLane({ id: "lane-2", name: "その他" }),
+      ],
+    );
+    expect(md).toContain("- lane-2: その他\n");
   });
 
   it("親アイテムを全フィールド付きの見出しセクションとして出力する（レーンは表示名）", () => {
@@ -229,11 +283,79 @@ describe("parseMarkdown", () => {
       ),
       lanes,
     );
-    expect(regenerated).toEqual(original);
+    // 生成したMDにはレーン設定セクションが含まれるため、lanesは復元される
+    expect(regenerated).toEqual({ ...original, lanes: [...lanes] });
   });
 
   it("プロジェクト名の見出しがない場合はエラーになる", () => {
     expect(() => parseMarkdown("何もない", lanes)).toThrow(/プロジェクト名/);
+  });
+
+  it("レーン設定セクションがあればレーン定義を読み取る", () => {
+    const md = `# P
+
+## レーン設定
+- lane-1: 受付 (投入先)
+- lane-2: 進行中 (Drop操作, WIP: 3)
+- lane-3: 済 (完了扱い)
+- lane-9: 破棄 (進捗除外)
+
+## P-1: 設計する
+- レーン: 進行中
+`;
+    const snapshot = parseMarkdown(md, lanes);
+    expect(snapshot.lanes).not.toBeNull();
+    expect(snapshot.lanes!.map((l) => l.id)).toEqual([
+      "lane-1",
+      "lane-2",
+      "lane-3",
+      "lane-9",
+    ]);
+    expect(snapshot.lanes![0]).toMatchObject({
+      name: "受付",
+      isDefaultEntry: true,
+    });
+    expect(snapshot.lanes![1]).toMatchObject({
+      name: "進行中",
+      hasDropAction: true,
+      wipLimit: 3,
+    });
+    expect(snapshot.lanes![2]).toMatchObject({ countsAsDone: true });
+    expect(snapshot.lanes![3]).toMatchObject({ excludedFromProgress: true });
+    // アイテムのレーン名は定義されたレーンで解決される
+    expect(snapshot.parents[0].laneId).toBe("lane-2");
+  });
+
+  it("レーン設定セクションがなければlanesはnullで、既存レーンで解決する", () => {
+    const snapshot = parseMarkdown(sample, lanes);
+    expect(snapshot.lanes).toBeNull();
+  });
+
+  it("レーン設定の不明な属性はエラーになる", () => {
+    const md = `# P
+
+## レーン設定
+- lane-1: 受付 (謎属性)
+`;
+    expect(() => parseMarkdown(md, lanes)).toThrow(/不明なレーン属性/);
+  });
+
+  it("生成したマークダウンからレーン設定込みで復元できる（ラウンドトリップ）", () => {
+    const customLanes = [
+      createLane({
+        id: "lane-1",
+        name: "受付",
+        isDefaultEntry: true,
+        wipLimit: 9,
+      }),
+      createLane({ id: "lane-2", name: "済", countsAsDone: true }),
+    ];
+    const md = generateMarkdown(
+      { projectName: "P", parents: [], children: [] },
+      customLanes,
+    );
+    const snapshot = parseMarkdown(md, lanes);
+    expect(snapshot.lanes).toEqual(customLanes);
   });
 
   it("不正なサイズはエラーになる", () => {
