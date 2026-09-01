@@ -23,7 +23,7 @@ describe("generateMarkdown", () => {
     );
     expect(md).toContain("## レーン設定");
     expect(md).toContain("- lane-1: 未着手 (投入先)");
-    expect(md).toContain("- lane-2: 作業中 (Drop操作)");
+    expect(md).toContain("- lane-2: 作業中\n");
     expect(md).toContain("- lane-3: 完了 (完了扱い)");
     expect(md).toContain("- lane-4: クローズ (完了扱い)");
     expect(md).toContain("- lane-5: 中断 (進捗除外)");
@@ -37,7 +37,19 @@ describe("generateMarkdown", () => {
       { projectName: "札帖", parents: [], children: [] },
       withWip,
     );
-    expect(md).toContain("- lane-2: 作業中 (Drop操作, WIP: 3)");
+    expect(md).toContain("- lane-2: 作業中 (WIP: 3)");
+  });
+
+  it("Drop操作付きレーンはDrop操作属性込みでラウンドトリップできる", () => {
+    const withDrop = lanes.map((lane) =>
+      lane.id === "lane-2" ? { ...lane, hasDropAction: true } : lane,
+    );
+    const md = generateMarkdown(
+      { projectName: "札帖", parents: [], children: [] },
+      withDrop,
+    );
+    expect(md).toContain("- lane-2: 作業中 (Drop操作)");
+    expect(parseMarkdown(md, lanes).lanes).toEqual(withDrop);
   });
 
   it("移動先制限付きレーンは移動先属性込みでラウンドトリップできる", () => {

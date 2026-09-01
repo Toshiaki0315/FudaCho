@@ -48,7 +48,7 @@ export function createLane(input: CreateLaneInput): Lane {
 export function createDefaultLanes(): Lane[] {
   return [
     createLane({ id: "lane-1", name: "未着手", isDefaultEntry: true }),
-    createLane({ id: "lane-2", name: "作業中", hasDropAction: true }),
+    createLane({ id: "lane-2", name: "作業中" }),
     createLane({ id: "lane-3", name: "完了", countsAsDone: true }),
     createLane({ id: "lane-4", name: "クローズ", countsAsDone: true }),
     createLane({ id: "lane-5", name: "中断", excludedFromProgress: true }),

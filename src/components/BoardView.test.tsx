@@ -11,6 +11,16 @@ describe("BoardView", () => {
     useBoardStore.getState().reset();
   });
 
+  function enableDropOn(laneId: string) {
+    const { settings } = useBoardStore.getState();
+    useBoardStore.getState().updateSettings({
+      projectName: settings.projectName,
+      lanes: settings.lanes.map((lane) =>
+        lane.id === laneId ? { ...lane, hasDropAction: true } : lane,
+      ),
+    });
+  }
+
   it("ストアの親アイテムを対応するレーンに表示する", () => {
     const store = useBoardStore.getState();
     store.addParent({ summary: "設計する" });
@@ -52,9 +62,9 @@ describe("BoardView", () => {
     expect(within(todoLane).getByText("P-1")).toBeInTheDocument();
   });
 
-  it("Drop操作を持つレーン（作業中）のカードにDropボタンが表示される", () => {
-    const store = useBoardStore.getState();
-    store.addParent({ summary: "設計する" });
+  it("Drop操作を有効にしたレーンのカードにDropボタンが表示される", () => {
+    enableDropOn("lane-2");
+    useBoardStore.getState().addParent({ summary: "設計する" });
     useBoardStore.getState().moveItem("P-1", "lane-2");
     render(<BoardView />);
     const inProgressLane = screen.getByRole("region", { name: "作業中" });
@@ -63,8 +73,10 @@ describe("BoardView", () => {
     ).toBeInTheDocument();
   });
 
-  it("Drop操作を持たないレーンのカードにはDropボタンが表示されない", () => {
+  it("デフォルトではどのレーンにもDropボタンが表示されない", () => {
     useBoardStore.getState().addParent({ summary: "設計する" });
+    useBoardStore.getState().addParent({ summary: "実装する" });
+    useBoardStore.getState().moveItem("P-2", "lane-2");
     render(<BoardView />);
     expect(
       screen.queryByRole("button", { name: "Drop" }),
@@ -73,8 +85,8 @@ describe("BoardView", () => {
 
   it("Dropボタンで作業中のアイテムが中断レーンに移動しデータは保持される", async () => {
     const user = userEvent.setup();
-    const store = useBoardStore.getState();
-    store.addParent({ summary: "設計する" });
+    enableDropOn("lane-2");
+    useBoardStore.getState().addParent({ summary: "設計する" });
     useBoardStore.getState().moveItem("P-1", "lane-2");
     render(<BoardView />);
     await user.click(screen.getByRole("button", { name: "Drop" }));
@@ -84,13 +96,15 @@ describe("BoardView", () => {
   });
 
   it("Drop先レーンがWIP制限に達している場合はDropボタンが無効になる", () => {
-    const store = useBoardStore.getState();
-    const settings = store.settings;
-    store.updateSettings({
+    const { settings } = useBoardStore.getState();
+    useBoardStore.getState().updateSettings({
       projectName: settings.projectName,
-      lanes: settings.lanes.map((lane) =>
-        lane.id === "lane-5" ? { ...lane, wipLimit: 1 } : lane,
-      ),
+      lanes: settings.lanes.map((lane) => {
+        if (lane.id === "lane-5") {
+          return { ...lane, wipLimit: 1 };
+        }
+        return lane.id === "lane-2" ? { ...lane, hasDropAction: true } : lane;
+      }),
     });
     useBoardStore.getState().addParent({ summary: "A" });
     useBoardStore.getState().addParent({ summary: "B" });

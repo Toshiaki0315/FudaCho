@@ -51,11 +51,9 @@ describe("createDefaultLanes", () => {
     ).toEqual(["中断"]);
   });
 
-  it("「作業中」はDrop操作を持つ（現行動作の維持。デフォルト無効化は8.9で行う）", () => {
+  it("デフォルトではどのレーンもDrop操作を持たない（Droppedへの移動はD&Dで行う）", () => {
     const lanes = createDefaultLanes();
-    expect(lanes.filter((l) => l.hasDropAction).map((l) => l.name)).toEqual([
-      "作業中",
-    ]);
+    expect(lanes.filter((l) => l.hasDropAction)).toEqual([]);
   });
 
   it("デフォルトではWIP制限なし・全レーンへ移動可能である", () => {
