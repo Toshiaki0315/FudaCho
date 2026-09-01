@@ -76,9 +76,9 @@ describe("BoardView", () => {
     useBoardStore.getState().moveItem("P-1", "InProgress");
     render(<BoardView />);
     await user.click(screen.getByRole("button", { name: "Drop" }));
+    expect(useBoardStore.getState().parents["P-1"].status).toBe("Dropped");
     const droppedLane = screen.getByRole("region", { name: "中断" });
     expect(within(droppedLane).getByText("設計する")).toBeInTheDocument();
-    expect(useBoardStore.getState().parents["P-1"].status).toBe("Dropped");
   });
 
   it("カードはドラッグ可能である（ドラッグ属性を持つ）", () => {

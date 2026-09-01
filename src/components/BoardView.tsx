@@ -1,4 +1,11 @@
-import { DndContext, useDroppable } from "@dnd-kit/core";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -27,6 +34,11 @@ function LaneDropArea({ status, children }: LaneDropAreaProps) {
 }
 
 export function BoardView() {
+  // クリックやダブルクリックをドラッグ開始と区別するため、5px動くまではドラッグを開始しない
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor),
+  );
   const settings = useBoardStore((state) => state.settings);
   const parents = useBoardStore((state) => state.parents);
   const children = useBoardStore((state) => state.children);
@@ -77,7 +89,7 @@ export function BoardView() {
   );
 
   return (
-    <DndContext onDragEnd={composeDragHandler(handleDragEnd)}>
+    <DndContext sensors={sensors} onDragEnd={composeDragHandler(handleDragEnd)}>
       <KanbanBoard
         lanes={settings.lanes}
         laneContent={laneContent}
