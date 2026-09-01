@@ -3,24 +3,24 @@ import "./App.css";
 import { BoardView } from "./components/BoardView";
 import { Header } from "./components/Header";
 import { ExportDialog, ImportDialog } from "./components/MarkdownDialogs";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { useBoardStore } from "./store/boardStore";
 
-type DialogKind = "export" | "import" | null;
+type DialogKind = "export" | "import" | "settings" | null;
 
 function App() {
-  const projectName = useBoardStore((state) => state.settings.projectName);
+  const settings = useBoardStore((state) => state.settings);
   const exportMarkdown = useBoardStore((state) => state.exportMarkdown);
   const importMarkdown = useBoardStore((state) => state.importMarkdown);
+  const updateSettings = useBoardStore((state) => state.updateSettings);
   const [dialog, setDialog] = useState<DialogKind>(null);
   const closeDialog = () => setDialog(null);
 
   return (
     <main className="container">
       <Header
-        projectName={projectName}
-        onOpenSettings={() => {
-          // 設定画面はタスク7.3で実装する
-        }}
+        projectName={settings.projectName}
+        onOpenSettings={() => setDialog("settings")}
         onExport={() => setDialog("export")}
         onImport={() => setDialog("import")}
       />
@@ -30,6 +30,13 @@ function App() {
       )}
       {dialog === "import" && (
         <ImportDialog onImport={importMarkdown} onClose={closeDialog} />
+      )}
+      {dialog === "settings" && (
+        <SettingsDialog
+          settings={settings}
+          onSave={updateSettings}
+          onClose={closeDialog}
+        />
       )}
     </main>
   );

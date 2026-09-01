@@ -53,6 +53,26 @@ describe("App", () => {
     expect(within(todoLane).getByText("取り込んだタスク")).toBeInTheDocument();
   });
 
+  it("設定でプロジェクト名とレーン構成を変更できる", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "設定" }));
+    const projectName = screen.getByLabelText("プロジェクト名");
+    await user.clear(projectName);
+    await user.type(projectName, "改名プロジェクト");
+    const rows = screen.getAllByRole("listitem");
+    await user.click(within(rows[3]).getByRole("button", { name: "削除" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "改名プロジェクト" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("region")).toHaveLength(4);
+    expect(
+      screen.queryByRole("region", { name: "クローズ" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("不正なマークダウンのインポートはエラーを表示する", async () => {
     const user = userEvent.setup();
     render(<App />);
