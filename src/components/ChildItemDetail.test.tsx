@@ -89,6 +89,17 @@ describe("ChildItemDetail", () => {
     );
   });
 
+  it("見積時間・実績時間が未設定の場合は空欄で表示される", () => {
+    const item = createChildItem({
+      id: "C-2",
+      parentId: "P-1",
+      description: "作業",
+    });
+    render(<ChildItemDetail item={item} onSave={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByLabelText("見積時間")).toHaveValue(null);
+    expect(screen.getByLabelText("実績時間")).toHaveValue(null);
+  });
+
   it("キャンセルするとonCloseが呼ばれ、onSaveは呼ばれない", async () => {
     const onSave = vi.fn();
     const onClose = vi.fn();
