@@ -23,4 +23,32 @@ describe("Header", () => {
     await user.click(screen.getByRole("button", { name: "設定" }));
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
+
+  it("エクスポート・インポートボタンを表示しクリックでハンドラが呼ばれる", async () => {
+    const onExport = vi.fn();
+    const onImport = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Header
+        projectName="札帖"
+        onOpenSettings={vi.fn()}
+        onExport={onExport}
+        onImport={onImport}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "エクスポート" }));
+    expect(onExport).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "インポート" }));
+    expect(onImport).toHaveBeenCalledTimes(1);
+  });
+
+  it("ハンドラ未指定の場合はエクスポート・インポートボタンを表示しない", () => {
+    render(<Header projectName="札帖" onOpenSettings={vi.fn()} />);
+    expect(
+      screen.queryByRole("button", { name: "エクスポート" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "インポート" }),
+    ).not.toBeInTheDocument();
+  });
 });
