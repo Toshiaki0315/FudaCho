@@ -384,6 +384,12 @@ body {
   resize: vertical;
 }
 
+/* 内容に合わせて自動で高さが伸びる（field-sizing非対応環境では手動リサイズ可能） */
+.item-detail textarea.autogrow {
+  min-height: auto;
+  field-sizing: content;
+}
+
 .comments-section {
   display: flex;
   flex-direction: column;

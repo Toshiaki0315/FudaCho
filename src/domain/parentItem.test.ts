@@ -7,20 +7,20 @@ import {
 } from "./parentItem";
 
 describe("FIBONACCI_SIZES", () => {
-  it("許容サイズはフィボナッチ数列 (0, 1, 2, 3, 5, 8, 13) と ♾️ のみである", () => {
-    expect(FIBONACCI_SIZES).toEqual([0, 1, 2, 3, 5, 8, 13, INFINITY_SIZE]);
+  it("許容サイズはフィボナッチ数列 (0, 1, 2, 3, 5, 8, 13, 21) と ♾️ のみである", () => {
+    expect(FIBONACCI_SIZES).toEqual([0, 1, 2, 3, 5, 8, 13, 21, INFINITY_SIZE]);
   });
 });
 
 describe("isValidSize", () => {
-  it.each([0, 1, 2, 3, 5, 8, 13, INFINITY_SIZE])(
+  it.each([0, 1, 2, 3, 5, 8, 13, 21, INFINITY_SIZE])(
     "%s は有効なサイズである",
     (size) => {
       expect(isValidSize(size)).toBe(true);
     },
   );
 
-  it.each([4, 6, 7, 21, -1, 1.5])("%s は無効なサイズである", (size) => {
+  it.each([4, 6, 7, 22, 34, -1, 1.5])("%s は無効なサイズである", (size) => {
     expect(isValidSize(size)).toBe(false);
   });
 });
@@ -37,13 +37,13 @@ describe("createParentItem", () => {
     expect(item.laneId).toBe("lane-1");
   });
 
-  it("デフォルト値が設定される（サイズ0, 空の文字列フィールドと空配列）", () => {
+  it("デフォルト値が設定される（サイズ3, 空の文字列フィールドと空配列）", () => {
     const item = createParentItem({
       id: "P-1",
       summary: "設計する",
       laneId: "lane-1",
     });
-    expect(item.size).toBe(0);
+    expect(item.size).toBe(3);
     expect(item.assignee).toBe("");
     expect(item.reason).toBe("");
     expect(item.plannedStartDate).toBe("");

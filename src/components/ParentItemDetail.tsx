@@ -43,6 +43,12 @@ export function ParentItemDetail({
     setNewComment("");
   };
 
+  // field-sizing非対応の環境（WKWebView等）向けに、入力内容に合わせて高さを伸ばす
+  const autoGrow = (el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  };
+
   const handleSave = () => {
     onSave({
       summary,
@@ -70,9 +76,14 @@ export function ParentItemDetail({
         <div className="item-detail-body">
           <label>
             概要
-            <input
+            <textarea
+              rows={2}
+              className="autogrow"
               value={summary}
-              onChange={(e) => setSummary(e.target.value)}
+              onChange={(e) => {
+                setSummary(e.target.value);
+                autoGrow(e.currentTarget);
+              }}
             />
           </label>
           <label>
@@ -100,7 +111,15 @@ export function ParentItemDetail({
           </label>
           <label>
             理由
-            <input value={reason} onChange={(e) => setReason(e.target.value)} />
+            <textarea
+              rows={2}
+              className="autogrow"
+              value={reason}
+              onChange={(e) => {
+                setReason(e.target.value);
+                autoGrow(e.currentTarget);
+              }}
+            />
           </label>
           <label>
             開始予定日

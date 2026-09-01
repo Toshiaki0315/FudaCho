@@ -47,6 +47,12 @@ describe("ParentItemDetail", () => {
     expect(screen.getByLabelText("備考")).toHaveValue("備考メモ");
   });
 
+  it("概要と理由は複数行が入力できるテキストエリアである", () => {
+    renderDetail();
+    expect(screen.getByLabelText("概要").tagName).toBe("TEXTAREA");
+    expect(screen.getByLabelText("理由").tagName).toBe("TEXTAREA");
+  });
+
   it("所属レーン名は読み取り専用で表示される（移動はD&Dで行う）", () => {
     renderDetail();
     expect(screen.getByText("作業中")).toBeInTheDocument();
@@ -58,7 +64,7 @@ describe("ParentItemDetail", () => {
     const options = screen
       .getAllByRole("option")
       .map((o) => (o as HTMLOptionElement).value);
-    expect(options).toEqual(["0", "1", "2", "3", "5", "8", "13", "♾️"]);
+    expect(options).toEqual(["0", "1", "2", "3", "5", "8", "13", "21", "♾️"]);
   });
 
   it("編集して保存すると変更内容がonSaveに渡される", async () => {

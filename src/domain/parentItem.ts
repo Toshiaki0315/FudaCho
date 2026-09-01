@@ -1,6 +1,18 @@
 export const INFINITY_SIZE = "♾️" as const;
 
-export const FIBONACCI_SIZES = [0, 1, 2, 3, 5, 8, 13, INFINITY_SIZE] as const;
+export const FIBONACCI_SIZES = [
+  0,
+  1,
+  2,
+  3,
+  5,
+  8,
+  13,
+  21,
+  INFINITY_SIZE,
+] as const;
+
+export const DEFAULT_SIZE = 3;
 
 export type Size = (typeof FIBONACCI_SIZES)[number];
 
@@ -43,7 +55,7 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
   if (input.laneId === "") {
     throw new Error("レーンIDは必須です");
   }
-  const size = input.size ?? 0;
+  const size = input.size ?? DEFAULT_SIZE;
   if (!isValidSize(size)) {
     throw new Error(
       `サイズはフィボナッチ数列 (${FIBONACCI_SIZES.join(", ")}) のみ指定できます`,
