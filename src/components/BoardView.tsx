@@ -61,6 +61,11 @@ export function BoardView() {
   // ラベル絞り込み（カードのラベルチップをクリックで設定）
   const [labelFilter, setLabelFilter] = useState<string | null>(null);
 
+  // 同じラベルをもう一度クリックしたら絞り込みを解除、別のラベルなら切り替える
+  const toggleLabelFilter = (label: string) => {
+    setLabelFilter((current) => (current === label ? null : label));
+  };
+
   // 通知は数秒後に自動で消える
   useEffect(() => {
     if (notice === null) {
@@ -105,13 +110,13 @@ export function BoardView() {
         item={parent}
         children_={parent.childIds.map((childId) => children[childId])}
         lanes={settings.lanes}
-        onLabelClick={setLabelFilter}
+        onLabelClick={toggleLabelFilter}
       />
     ) : (
       <ChildItemCard
         item={children[itemId]}
         labels={effectiveLabelsOf(itemId)}
-        onLabelClick={setLabelFilter}
+        onLabelClick={toggleLabelFilter}
       />
     );
     return (
