@@ -27,10 +27,22 @@ function child(id: string, laneId: string) {
 }
 
 describe("ParentItemCard", () => {
-  it("IDと概要を表示する", () => {
+  it("タイトル未設定時はIDと概要を表示する", () => {
     render(<ParentItemCard item={parent()} children_={[]} lanes={lanes} />);
     expect(screen.getByText("P-1")).toBeInTheDocument();
     expect(screen.getByText("設計する")).toBeInTheDocument();
+  });
+
+  it("タイトルがある場合はIDの代わりにタイトルを表示する", () => {
+    const item = createParentItem({
+      id: "P-1",
+      title: "画面設計",
+      summary: "設計する",
+      laneId: "lane-1",
+    });
+    render(<ParentItemCard item={item} children_={[]} lanes={lanes} />);
+    expect(screen.getByText("画面設計")).toBeInTheDocument();
+    expect(screen.queryByText("P-1")).not.toBeInTheDocument();
   });
 
   it("子アイテムがない場合、進捗率は0%と表示される", () => {

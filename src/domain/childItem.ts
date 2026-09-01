@@ -2,6 +2,8 @@ import { validateLabels } from "./labels";
 
 export interface ChildItem {
   id: string;
+  /** カード上でIDの代わりに表示する短い名前（未設定時はIDを表示） */
+  title: string;
   /** 親を持たない子アイテムはnull */
   parentId: string | null;
   description: string;
@@ -18,6 +20,7 @@ export interface ChildItem {
 
 export interface CreateChildItemInput {
   id: string;
+  title?: string;
   parentId?: string | null;
   description: string;
   laneId: string;
@@ -52,6 +55,7 @@ export function createChildItem(input: CreateChildItemInput): ChildItem {
   }
   return {
     id: input.id,
+    title: input.title ?? "",
     parentId: input.parentId ?? null,
     description: input.description,
     assignee: input.assignee ?? "",

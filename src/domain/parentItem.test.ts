@@ -54,6 +54,17 @@ describe("createParentItem", () => {
     expect(item.labels).toEqual([]);
     expect(item.childIds).toEqual([]);
     expect(item.ready).toBe(false);
+    expect(item.title).toBe("");
+  });
+
+  it("タイトルを指定して作成できる", () => {
+    const item = createParentItem({
+      id: "P-1",
+      title: "画面設計",
+      summary: "設計する",
+      laneId: "lane-1",
+    });
+    expect(item.title).toBe("画面設計");
   });
 
   it("全フィールドを指定して作成できる", () => {

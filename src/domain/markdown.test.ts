@@ -293,6 +293,34 @@ describe("parseMarkdown", () => {
     expect(regenerated).toEqual(original);
   });
 
+  it("親・子のタイトルを出力し、読み戻せる（ラウンドトリップ）", () => {
+    const parent = createParentItem({
+      id: "P-1",
+      title: "画面設計",
+      summary: "設計する",
+      laneId: "lane-1",
+      childIds: ["C-1"],
+    });
+    const children = [
+      createChildItem({
+        id: "C-1",
+        title: "図面作成",
+        parentId: "P-1",
+        description: "図を描く",
+        laneId: "lane-2",
+      }),
+    ];
+    const md = generateMarkdown(
+      { projectName: "P", parents: [parent], children },
+      lanes,
+    );
+    expect(md).toContain("- タイトル: 画面設計");
+    expect(md).toContain("- [ ] C-1: 図を描く (タイトル: 図面作成)");
+    const snapshot = parseMarkdown(md, lanes);
+    expect(snapshot.parents[0].title).toBe("画面設計");
+    expect(snapshot.children[0].title).toBe("図面作成");
+  });
+
   it("サイズ♾️を読み込める", () => {
     const md = `# P
 

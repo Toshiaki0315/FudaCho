@@ -129,11 +129,13 @@ describe("BoardView", () => {
     expect(screen.getByText("詳細図を描く")).toBeInTheDocument();
   });
 
-  it("親を持つ子の詳細ビューには親から引き継いだラベルが表示される", async () => {
+  it("親を持つ子の詳細ビューには親のタイトルと引き継いだラベルが表示される", async () => {
     const user = userEvent.setup();
-    const parentId = useBoardStore
-      .getState()
-      .addParent({ summary: "設計する", labels: ["設計"] });
+    const parentId = useBoardStore.getState().addParent({
+      title: "画面設計",
+      summary: "設計する",
+      labels: ["設計"],
+    });
     useBoardStore.getState().addChild({ parentId, description: "図を描く" });
     render(<BoardView />);
     await user.dblClick(screen.getByText("図を描く"));
@@ -141,6 +143,18 @@ describe("BoardView", () => {
       name: "親から引き継いだラベル",
     });
     expect(within(inherited).getByText("設計")).toBeInTheDocument();
+    expect(screen.getByText("親: 画面設計")).toBeInTheDocument();
+  });
+
+  it("親にタイトルがない場合、子詳細の「親:」には親IDが表示される", async () => {
+    const user = userEvent.setup();
+    const parentId = useBoardStore
+      .getState()
+      .addParent({ summary: "設計する" });
+    useBoardStore.getState().addChild({ parentId, description: "図を描く" });
+    render(<BoardView />);
+    await user.dblClick(screen.getByText("図を描く"));
+    expect(screen.getByText("親: P-1")).toBeInTheDocument();
   });
 
   it("詳細ビューをキャンセルすると変更されずに閉じる", async () => {

@@ -34,7 +34,11 @@ export function KanbanBoard({
   return (
     <div className="kanban-board">
       {lanes.map((lane) => (
-        <section key={lane.id} className="kanban-lane" aria-label={lane.name}>
+        <section
+          key={lane.id}
+          className={`kanban-lane role-${lane.role}`}
+          aria-label={lane.name}
+        >
           <h2>
             {lane.name}
             {laneCounts && (

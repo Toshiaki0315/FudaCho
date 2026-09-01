@@ -69,6 +69,15 @@ body {
   padding: 8px;
 }
 
+/* PBL（要求一覧）は青系、Drop（中断）は赤系の背景で見分けられるようにする */
+.kanban-lane.role-pbl {
+  background-color: #dbe9f9;
+}
+
+.kanban-lane.role-drop {
+  background-color: #f7dfdf;
+}
+
 .kanban-lane h2 {
   margin: 4px 4px 8px;
   font-size: 14px;

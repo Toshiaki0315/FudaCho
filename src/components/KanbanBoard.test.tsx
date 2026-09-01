@@ -80,6 +80,18 @@ describe("KanbanBoard", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("PBLとDropのレーンには役割別の背景クラスが付く", () => {
+    const { lanes } = createDefaultSettings();
+    render(<KanbanBoard lanes={lanes} />);
+    expect(screen.getByRole("region", { name: "PBL" })).toHaveClass("role-pbl");
+    expect(screen.getByRole("region", { name: "Drop" })).toHaveClass(
+      "role-drop",
+    );
+    expect(screen.getByRole("region", { name: "作業中" })).toHaveClass(
+      "role-free",
+    );
+  });
+
   it("laneContentで各レーンに内容を描画できる", () => {
     const { lanes } = createDefaultSettings();
     render(

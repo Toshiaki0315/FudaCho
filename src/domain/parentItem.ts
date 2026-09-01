@@ -20,6 +20,8 @@ export type Size = (typeof FIBONACCI_SIZES)[number];
 
 export interface ParentItem {
   id: string;
+  /** カード上でIDの代わりに表示する短い名前（未設定時はIDを表示） */
+  title: string;
   summary: string;
   size: Size;
   laneId: string;
@@ -49,6 +51,7 @@ export function isValidSize(value: unknown): value is Size {
 
 export interface CreateParentItemInput {
   id: string;
+  title?: string;
   summary: string;
   laneId: string;
   size?: Size;
@@ -90,6 +93,7 @@ export function createParentItem(input: CreateParentItemInput): ParentItem {
   }
   return {
     id: input.id,
+    title: input.title ?? "",
     summary: input.summary,
     size,
     laneId: input.laneId,

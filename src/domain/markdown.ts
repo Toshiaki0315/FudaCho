@@ -95,6 +95,9 @@ function childLines(child: ChildItem, lanes: readonly Lane[]): string[] {
   }
   const checked = lane.role === "close";
   const meta: string[] = [];
+  if (child.title !== "") {
+    meta.push(`タイトル: ${child.title}`);
+  }
   if (lane.role !== "sbl") {
     meta.push(`レーン: ${lane.name}`);
   }
@@ -134,6 +137,9 @@ export function generateMarkdown(
   }
   for (const parent of snapshot.parents) {
     lines.push("", `## ${parent.id}: ${parent.summary}`);
+    if (parent.title !== "") {
+      lines.push(`- タイトル: ${parent.title}`);
+    }
     lines.push(`- レーン: ${laneNameOf(lanes, parent.laneId)}`);
     lines.push(`- サイズ: ${parent.size}`);
     if (parent.assignee !== "") {
@@ -215,7 +221,9 @@ function parseChildLine(
         throw new Error(`子アイテムのメタデータを解釈できません: ${line}`);
       }
       const [, key, value] = kv;
-      if (key === "レーン") {
+      if (key === "タイトル") {
+        input.title = value;
+      } else if (key === "レーン") {
         laneId = laneByName(lanes, value).id;
       } else if (key === "担当") {
         input.assignee = value;
@@ -342,7 +350,9 @@ export function parseMarkdown(
     if (field) {
       const [, key, value = ""] = field;
       parent.inComments = false;
-      if (key === "レーン") {
+      if (key === "タイトル") {
+        parent.input.title = value;
+      } else if (key === "レーン") {
         parent.input.laneId = laneByName(effectiveLanes(), value).id;
       } else if (key === "サイズ") {
         const size = value === "♾️" ? value : Number(value);

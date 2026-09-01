@@ -25,6 +25,7 @@ function renderDetail(
     <ChildItemDetail
       item={buildItem()}
       parentLabels={[]}
+      parentName="P-1"
       laneName="作業中"
       onSave={vi.fn()}
       onClose={vi.fn()}
@@ -52,6 +53,22 @@ describe("ChildItemDetail", () => {
     const description = screen.getByLabelText("作業内容");
     expect(description.tagName).toBe("TEXTAREA");
     expect(description).toHaveAttribute("rows", "4");
+  });
+
+  it("ヘッダーの「親:」にはparentName（親のタイトル等）が表示される", () => {
+    renderDetail({ parentName: "画面設計" });
+    expect(screen.getByText("親: 画面設計")).toBeInTheDocument();
+  });
+
+  it("タイトルを編集して保存できる", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDetail({ onSave });
+    await user.type(screen.getByLabelText("タイトル"), "図面作成");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "図面作成" }),
+    );
   });
 
   it("所属レーン名は読み取り専用で表示される（移動はD&Dで行う）", () => {
@@ -82,6 +99,7 @@ describe("ChildItemDetail", () => {
     await user.type(end, "2026-09-04");
     await user.click(screen.getByRole("button", { name: "保存" }));
     expect(onSave).toHaveBeenCalledWith({
+      title: "",
       description: "詳細図を描く",
       assignee: "野村2",
       estimatedHours: 6,

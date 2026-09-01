@@ -94,7 +94,20 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
   hydrate(persisted) {
     validateLanes(persisted.settings.lanes);
-    set(selectPersisted(persisted));
+    // タイトル導入前の保存データとの互換: title を補完する
+    const parents = Object.fromEntries(
+      Object.entries(persisted.parents).map(([id, parent]) => [
+        id,
+        { ...parent, title: parent.title ?? "" },
+      ]),
+    );
+    const children = Object.fromEntries(
+      Object.entries(persisted.children).map(([id, child]) => [
+        id,
+        { ...child, title: child.title ?? "" },
+      ]),
+    );
+    set(selectPersisted({ ...persisted, parents, children }));
   },
 
   addParent(input) {

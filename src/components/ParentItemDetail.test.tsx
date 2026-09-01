@@ -47,6 +47,17 @@ describe("ParentItemDetail", () => {
     expect(screen.getByLabelText("備考")).toHaveValue("備考メモ");
   });
 
+  it("タイトルを編集して保存できる", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDetail({ onSave });
+    await user.type(screen.getByLabelText("タイトル"), "画面設計");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "画面設計" }),
+    );
+  });
+
   it("概要と理由は複数行が入力できるテキストエリアである", () => {
     renderDetail();
     expect(screen.getByLabelText("概要").tagName).toBe("TEXTAREA");

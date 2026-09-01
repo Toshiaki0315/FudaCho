@@ -29,6 +29,17 @@ describe("createChildItem", () => {
     expect(item.endDate).toBe("");
     expect(item.comments).toEqual([]);
     expect(item.labels).toEqual([]);
+    expect(item.title).toBe("");
+  });
+
+  it("タイトルを指定して作成できる", () => {
+    const item = createChildItem({
+      id: "C-1",
+      title: "図面作成",
+      description: "図を描く",
+      laneId: "lane-2",
+    });
+    expect(item.title).toBe("図面作成");
   });
 
   it("全フィールドを指定して作成できる", () => {

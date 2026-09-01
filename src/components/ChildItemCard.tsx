@@ -18,7 +18,9 @@ export function ChildItemCard({
       <span className="item-badge" role="img" aria-label="子アイテム">
         📝
       </span>
-      <span className="item-id">{item.id}</span>
+      <span className="item-id">
+        {item.title !== "" ? item.title : item.id}
+      </span>
       <p className="item-summary">{item.description}</p>
       <LabelChips labels={labels ?? item.labels} onLabelClick={onLabelClick} />
     </article>

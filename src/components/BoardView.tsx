@@ -319,6 +319,13 @@ export function BoardView() {
               ? parents[selectedChild.parentId].labels
               : []
           }
+          parentName={
+            selectedChild.parentId !== null
+              ? parents[selectedChild.parentId].title !== ""
+                ? parents[selectedChild.parentId].title
+                : parents[selectedChild.parentId].id
+              : "なし"
+          }
           laneName={laneOf(selectedChild.laneId).name}
           onSave={(patch) => {
             updateChild(selectedChild.id, patch);

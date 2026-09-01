@@ -23,6 +23,7 @@ export function ParentItemDetail({
   onClose,
   onAddChild,
 }: ParentItemDetailProps) {
+  const [title, setTitle] = useState(item.title);
   const [summary, setSummary] = useState(item.summary);
   const [size, setSize] = useState<Size>(item.size);
   const [assignee, setAssignee] = useState(item.assignee);
@@ -77,6 +78,7 @@ export function ParentItemDetail({
 
   const handleSave = () => {
     onSave({
+      title,
       summary,
       size,
       assignee,
@@ -118,6 +120,10 @@ export function ParentItemDetail({
               </p>
             )}
           </div>
+          <label>
+            タイトル
+            <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </label>
           <label>
             概要
             <textarea

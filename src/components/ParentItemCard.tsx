@@ -27,7 +27,7 @@ export function ParentItemCard({
         📋
       </span>
       <span className="item-id">
-        {item.id}
+        {item.title !== "" ? item.title : item.id}
         {item.ready && <span className="ready-badge">Ready</span>}
       </span>
       <p className="item-summary">{item.summary}</p>
