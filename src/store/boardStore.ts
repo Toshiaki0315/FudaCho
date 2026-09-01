@@ -45,6 +45,7 @@ interface BoardState {
   nextChildNumber: number;
   addParent: (input: AddParentInput) => string;
   addChild: (input: AddChildInput) => string;
+  updateSettings: (settings: Settings) => void;
   updateParent: (itemId: string, patch: ParentItemPatch) => void;
   updateChild: (itemId: string, patch: ChildItemPatch) => void;
   moveItem: (itemId: string, toStatus: Status, index?: number) => void;
@@ -98,6 +99,23 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       nextChildNumber: state.nextChildNumber + 1,
     }));
     return id;
+  },
+
+  updateSettings(settings) {
+    if (settings.projectName === "") {
+      throw new Error("プロジェクト名は必須です");
+    }
+    if (settings.lanes.length === 0) {
+      throw new Error("レーンは1件以上必要です");
+    }
+    const statuses = settings.lanes.map((lane) => lane.status);
+    if (new Set(statuses).size !== statuses.length) {
+      throw new Error("レーンのステータスが重複しています");
+    }
+    if (settings.lanes.some((lane) => lane.displayName === "")) {
+      throw new Error("レーン名は必須です");
+    }
+    set({ settings });
   },
 
   updateParent(itemId, patch) {

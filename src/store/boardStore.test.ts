@@ -247,6 +247,62 @@ describe("boardStore", () => {
     });
   });
 
+  describe("updateSettings", () => {
+    it("プロジェクト名とレーン設定を更新する", () => {
+      useBoardStore.getState().updateSettings({
+        projectName: "新プロジェクト",
+        lanes: [
+          { status: "ToDo", displayName: "やること" },
+          { status: "Done", displayName: "おわり" },
+        ],
+      });
+      const { settings } = useBoardStore.getState();
+      expect(settings.projectName).toBe("新プロジェクト");
+      expect(settings.lanes).toEqual([
+        { status: "ToDo", displayName: "やること" },
+        { status: "Done", displayName: "おわり" },
+      ]);
+    });
+
+    it("プロジェクト名が空の場合はエラーになる", () => {
+      expect(() =>
+        useBoardStore.getState().updateSettings({
+          projectName: "",
+          lanes: [{ status: "ToDo", displayName: "やること" }],
+        }),
+      ).toThrow(/プロジェクト名/);
+    });
+
+    it("レーンが0件の場合はエラーになる", () => {
+      expect(() =>
+        useBoardStore
+          .getState()
+          .updateSettings({ projectName: "P", lanes: [] }),
+      ).toThrow(/レーン/);
+    });
+
+    it("ステータスが重複する場合はエラーになる", () => {
+      expect(() =>
+        useBoardStore.getState().updateSettings({
+          projectName: "P",
+          lanes: [
+            { status: "ToDo", displayName: "A" },
+            { status: "ToDo", displayName: "B" },
+          ],
+        }),
+      ).toThrow(/重複/);
+    });
+
+    it("レーン名が空の場合はエラーになる", () => {
+      expect(() =>
+        useBoardStore.getState().updateSettings({
+          projectName: "P",
+          lanes: [{ status: "ToDo", displayName: "" }],
+        }),
+      ).toThrow(/レーン名/);
+    });
+  });
+
   describe("exportMarkdown", () => {
     it("現在のボードをマークダウンとして出力する（レーン順）", () => {
       const store = useBoardStore.getState();
