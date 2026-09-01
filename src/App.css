@@ -32,6 +32,25 @@ body {
   font-size: 20px;
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.header-actions button {
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  background-color: #ffffff;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.header-actions button:hover {
+  background-color: #f3f4f6;
+}
+
 .kanban-board {
   display: flex;
   gap: 12px;
@@ -77,6 +96,14 @@ body {
   grid-template-columns: auto 1fr;
   column-gap: 6px;
   align-items: center;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.sortable-card:hover .item-card {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.16);
+  transform: translateY(-1px);
 }
 
 .parent-item-card {
@@ -144,6 +171,27 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 10;
+  animation: fade-in 0.15s ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .item-detail {
@@ -156,6 +204,64 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  animation: pop-in 0.15s ease;
+}
+
+.markdown-textarea {
+  min-height: 240px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+}
+
+.import-error {
+  margin: 0;
+  color: #cf222e;
+  font-size: 13px;
+}
+
+.settings-lanes-title {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #57606a;
+}
+
+.settings-lanes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-lane-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-lane-row input {
+  flex: 1;
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+}
+
+.settings-lane-status {
+  width: 90px;
+  font-size: 12px;
+  color: #57606a;
+}
+
+.settings-lane-row button,
+.item-detail > button {
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  background-color: #f6f8fa;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .item-detail-header {
