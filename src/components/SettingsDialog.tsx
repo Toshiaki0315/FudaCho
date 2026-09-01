@@ -33,6 +33,13 @@ export function SettingsDialog({
     setLanes(lanes.filter((_, i) => i !== index));
   };
 
+  const moveLane = (index: number, direction: -1 | 1) => {
+    const next = [...lanes];
+    const [moved] = next.splice(index, 1);
+    next.splice(index + direction, 0, moved);
+    setLanes(next);
+  };
+
   const addLane = () => {
     setLanes([
       ...lanes,
@@ -71,6 +78,20 @@ export function SettingsDialog({
               {lane.isDefaultEntry && (
                 <span className="settings-lane-tag">投入先</span>
               )}
+              <button
+                type="button"
+                disabled={index === 0}
+                onClick={() => moveLane(index, -1)}
+              >
+                上へ
+              </button>
+              <button
+                type="button"
+                disabled={index === lanes.length - 1}
+                onClick={() => moveLane(index, 1)}
+              >
+                下へ
+              </button>
               <button type="button" onClick={() => removeLane(index)}>
                 削除
               </button>

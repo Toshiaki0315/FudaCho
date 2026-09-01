@@ -105,6 +105,47 @@ describe("SettingsDialog", () => {
     expect(ids).toContain("lane-5");
   });
 
+  it("「上へ」でレーンの順序を入れ替えて保存できる", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDialog({ onSave });
+    const rows = screen.getAllByRole("listitem");
+    await user.click(within(rows[1]).getByRole("button", { name: "上へ" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.lanes.map((l: Lane) => l.name)).toEqual([
+      "作業中",
+      "未着手",
+      "完了",
+      "クローズ",
+      "中断",
+    ]);
+  });
+
+  it("「下へ」でレーンの順序を入れ替えられる", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDialog({ onSave });
+    const rows = screen.getAllByRole("listitem");
+    await user.click(within(rows[0]).getByRole("button", { name: "下へ" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.lanes.map((l: Lane) => l.name).slice(0, 2)).toEqual([
+      "作業中",
+      "未着手",
+    ]);
+  });
+
+  it("先頭の「上へ」と末尾の「下へ」は無効である", () => {
+    renderDialog();
+    const rows = screen.getAllByRole("listitem");
+    expect(within(rows[0]).getByRole("button", { name: "上へ" })).toBeDisabled();
+    expect(within(rows[4]).getByRole("button", { name: "下へ" })).toBeDisabled();
+    expect(
+      within(rows[2]).getByRole("button", { name: "上へ" }),
+    ).not.toBeDisabled();
+  });
+
   it("lane-n形式でないIDがあっても追加時の採番は壊れない", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
