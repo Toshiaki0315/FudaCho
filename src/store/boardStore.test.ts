@@ -124,6 +124,44 @@ describe("boardStore", () => {
     });
   });
 
+  describe("handleDragEnd（D&D結果の適用）", () => {
+    it("レーンIDへのドロップでレーン間移動する", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "A" });
+      useBoardStore.getState().handleDragEnd("P-1", "InProgress");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].status).toBe("InProgress");
+      expect(state.laneOrder.InProgress).toEqual(["P-1"]);
+    });
+
+    it("同一レーンのアイテムへのドロップで並び替える", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().handleDragEnd("P-1", "P-2");
+      expect(useBoardStore.getState().laneOrder.ToDo).toEqual(["P-2", "P-1"]);
+    });
+
+    it("別レーンのアイテムへのドロップでその位置に移動する", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().moveItem("P-2", "InProgress");
+      useBoardStore.getState().handleDragEnd("P-1", "P-2");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-1"].status).toBe("InProgress");
+      expect(state.laneOrder.InProgress).toEqual(["P-1", "P-2"]);
+    });
+
+    it("変更が不要な場合（自分自身へのドロップ等）は状態を変えない", () => {
+      const store = useBoardStore.getState();
+      store.addParent({ summary: "A" });
+      const before = useBoardStore.getState().laneOrder;
+      useBoardStore.getState().handleDragEnd("P-1", "P-1");
+      expect(useBoardStore.getState().laneOrder).toEqual(before);
+    });
+  });
+
   describe("dropItem（Drop = データ保持したままDroppedへ）", () => {
     it("アイテムをDroppedレーンに移動しデータは保持する", () => {
       const store = useBoardStore.getState();

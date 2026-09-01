@@ -22,6 +22,7 @@ import {
   type Status,
 } from "../domain/settings";
 import { changeStatus } from "../domain/statusChange";
+import { resolveDragEnd } from "../components/dnd";
 
 type AddParentInput = Omit<CreateParentItemInput, "id">;
 type AddChildInput = Omit<CreateChildItemInput, "id">;
@@ -37,6 +38,7 @@ interface BoardState {
   addChild: (input: AddChildInput) => string;
   moveItem: (itemId: string, toStatus: Status, index?: number) => void;
   reorderLane: (status: Status, fromIndex: number, toIndex: number) => void;
+  handleDragEnd: (activeId: string, overId: string | null) => void;
   dropItem: (itemId: string) => void;
   reset: () => void;
 }
@@ -115,6 +117,18 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     set((state) => ({
       laneOrder: reorderWithinLane(state.laneOrder, status, fromIndex, toIndex),
     }));
+  },
+
+  handleDragEnd(activeId, overId) {
+    const action = resolveDragEnd(get().laneOrder, activeId, overId);
+    if (action === null) {
+      return;
+    }
+    if (action.type === "move") {
+      get().moveItem(activeId, action.toStatus, action.index);
+    } else {
+      get().reorderLane(action.status, action.fromIndex, action.toIndex);
+    }
   },
 
   dropItem(itemId) {
