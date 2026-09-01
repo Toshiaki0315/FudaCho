@@ -585,6 +585,20 @@ body {
   cursor: pointer;
 }
 
+/* 固定レーンと自由レーンのセクション境界（薄い区切り線） */
+.settings-lane-divider {
+  border-top: 1px solid #d8dee4;
+  margin: 4px 0;
+}
+
+.settings-lane-add {
+  display: flex;
+}
+
+.settings-lane-add .add-lane-button {
+  flex: 1;
+}
+
 /* レーン行の入力欄と同じ高さの追加ボタン */
 .add-lane-button {
   border: 1px dashed #8c959f;

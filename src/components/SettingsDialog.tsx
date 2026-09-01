@@ -76,12 +76,62 @@ export function SettingsDialog({
 
   const handleSave = () => {
     try {
-      onSave({ projectName, lanes });
+      // 固定レーンはWIP制限を持たない（古いデータに残っていても保存時に外す）
+      const normalized = lanes.map((lane) =>
+        isFixedRole(lane.role) ? { ...lane, wipLimit: null } : lane,
+      );
+      onSave({ projectName, lanes: normalized });
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
   };
+
+  const renderRow = (lane: Lane, index: number) => (
+    <li key={lane.id} className="settings-lane-row">
+      <input
+        aria-label={`レーン名（${lane.id}）`}
+        value={lane.name}
+        onChange={(e) => renameLane(index, e.target.value)}
+      />
+      {isFixedRole(lane.role) ? (
+        // 固定レーンは改名のみ可能（WIP制限・削除・並び替えなし）
+        <span className="settings-lane-tag">
+          {ROLE_BADGES[lane.role as Exclude<LaneRole, "free">]}
+        </span>
+      ) : (
+        <>
+          <input
+            type="number"
+            min={1}
+            max={99}
+            className="settings-wip-input"
+            placeholder="WIP"
+            aria-label={`WIP制限（${lane.id}）`}
+            value={lane.wipLimit ?? ""}
+            onChange={(e) => setWipLimit(index, e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={index === freeStart}
+            onClick={() => moveLane(index, -1)}
+          >
+            上へ
+          </button>
+          <button
+            type="button"
+            disabled={index === freeEnd}
+            onClick={() => moveLane(index, 1)}
+          >
+            下へ
+          </button>
+          <button type="button" onClick={() => removeLane(index)}>
+            削除
+          </button>
+        </>
+      )}
+    </li>
+  );
 
   return (
     <div className="modal-backdrop">
@@ -100,55 +150,27 @@ export function SettingsDialog({
           </label>
           <p className="settings-lanes-title">レーン</p>
           <ul className="settings-lanes">
-            {lanes.map((lane, index) => (
-              <li key={lane.id} className="settings-lane-row">
-                <input
-                  aria-label={`レーン名（${lane.id}）`}
-                  value={lane.name}
-                  onChange={(e) => renameLane(index, e.target.value)}
-                />
-                <input
-                  type="number"
-                  min={1}
-                  max={99}
-                  className="settings-wip-input"
-                  placeholder="WIP"
-                  aria-label={`WIP制限（${lane.id}）`}
-                  value={lane.wipLimit ?? ""}
-                  onChange={(e) => setWipLimit(index, e.target.value)}
-                />
-                {isFixedRole(lane.role) ? (
-                  // 固定レーンは改名のみ可能（削除・並び替え不可）
-                  <span className="settings-lane-tag">
-                    {ROLE_BADGES[lane.role as Exclude<LaneRole, "free">]}
-                  </span>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      disabled={index === freeStart}
-                      onClick={() => moveLane(index, -1)}
-                    >
-                      上へ
-                    </button>
-                    <button
-                      type="button"
-                      disabled={index === freeEnd}
-                      onClick={() => moveLane(index, 1)}
-                    >
-                      下へ
-                    </button>
-                    <button type="button" onClick={() => removeLane(index)}>
-                      削除
-                    </button>
-                  </>
-                )}
-              </li>
-            ))}
+            {/* 固定（PBL/SBL）・自由・固定（Close/Drop）の3セクションを区切り線で分ける */}
+            {lanes.slice(0, freeStart).map((lane, i) => renderRow(lane, i))}
+            <li role="presentation" className="settings-lane-divider" />
+            {lanes
+              .slice(freeStart, freeEnd + 1)
+              .map((lane, i) => renderRow(lane, freeStart + i))}
+            <li role="presentation" className="settings-lane-add">
+              {/* 追加レーンはCloseの手前に挿入されるため、ボタンも自由レーンの直下に置く */}
+              <button
+                type="button"
+                className="add-lane-button"
+                onClick={addLane}
+              >
+                ＋レーンを追加
+              </button>
+            </li>
+            <li role="presentation" className="settings-lane-divider" />
+            {lanes
+              .slice(freeEnd + 1)
+              .map((lane, i) => renderRow(lane, freeEnd + 1 + i))}
           </ul>
-          <button type="button" className="add-lane-button" onClick={addLane}>
-            ＋レーンを追加
-          </button>
           {error !== null && <p className="import-error">{error}</p>}
         </div>
         <footer className="item-detail-footer">

@@ -47,6 +47,49 @@ describe("SettingsDialog", () => {
     }
   });
 
+  it("固定レーンにはWIP入力がなく、自由レーンにはある", () => {
+    renderDialog();
+    const rows = screen.getAllByRole("listitem");
+    for (const index of [0, 1, 3, 4]) {
+      expect(
+        within(rows[index]).queryByRole("spinbutton", { name: /WIP/ }),
+      ).not.toBeInTheDocument();
+    }
+    expect(
+      within(rows[2]).getByRole("spinbutton", { name: /WIP/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("固定レーンにWIP制限が残っていても保存時にnullへ正規化される", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    const settings = createDefaultSettings();
+    settings.lanes = settings.lanes.map((lane) =>
+      lane.role === "drop" ? { ...lane, wipLimit: 5 } : lane,
+    );
+    renderDialog({ onSave, settings });
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave.mock.calls[0][0].lanes[4].wipLimit).toBeNull();
+  });
+
+  it("＋レーンを追加ボタンは自由レーンセクション内（Closeの手前）にある", () => {
+    renderDialog();
+    const list = screen.getByRole("list");
+    const items = Array.from(list.children).map((el) => el.textContent ?? "");
+    const addIndex = items.findIndex((text) => text.includes("＋レーンを追加"));
+    const closeIndex = items.findIndex((text) => text.includes("Close"));
+    const freeIndex = items.findIndex((text) => text.includes("作業中"));
+    expect(addIndex).toBeGreaterThan(freeIndex);
+    expect(addIndex).toBeLessThan(closeIndex);
+  });
+
+  it("固定レーンと自由レーンの間に区切り線が表示される", () => {
+    const { container } = renderDialog();
+    expect(container.querySelectorAll(".settings-lane-divider")).toHaveLength(
+      2,
+    );
+  });
+
   it("固定レーンも改名して保存できる（IDと役割は不変）", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();
