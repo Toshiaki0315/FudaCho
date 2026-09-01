@@ -124,6 +124,22 @@ describe("SettingsDialog", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("Error以外の例外も文字列化して表示する", async () => {
+    const onSave = vi.fn(() => {
+      throw "文字列の例外";
+    });
+    const user = userEvent.setup();
+    render(
+      <SettingsDialog
+        settings={createDefaultSettings()}
+        onSave={onSave}
+        onClose={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(screen.getByText("文字列の例外")).toBeInTheDocument();
+  });
+
   it("保存が成功したら閉じる", async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
