@@ -90,6 +90,39 @@ describe("KanbanBoard", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("laneCountsを渡すとレーンヘッダーに件数を表示する", () => {
+    const { lanes } = createDefaultSettings();
+    render(<KanbanBoard lanes={lanes} laneCounts={{ "lane-1": 3 }} />);
+    const todoLane = screen.getByRole("region", { name: "未着手" });
+    expect(within(todoLane).getByText("3")).toBeInTheDocument();
+  });
+
+  it("WIP制限付きレーンは「件数 / 制限」を表示する", () => {
+    const lanes = [
+      createLane({
+        id: "lane-1",
+        name: "作業中",
+        wipLimit: 5,
+        isDefaultEntry: true,
+      }),
+    ];
+    render(<KanbanBoard lanes={lanes} laneCounts={{ "lane-1": 2 }} />);
+    expect(screen.getByText("2 / 5")).toBeInTheDocument();
+  });
+
+  it("WIP制限超過のレーンには超過スタイルが付く", () => {
+    const lanes = [
+      createLane({
+        id: "lane-1",
+        name: "作業中",
+        wipLimit: 1,
+        isDefaultEntry: true,
+      }),
+    ];
+    render(<KanbanBoard lanes={lanes} laneCounts={{ "lane-1": 2 }} />);
+    expect(screen.getByText("2 / 1")).toHaveClass("wip-exceeded");
+  });
+
   it("laneContentで各レーンに内容を描画できる", () => {
     const { lanes } = createDefaultSettings();
     render(

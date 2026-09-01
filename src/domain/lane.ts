@@ -81,6 +81,11 @@ export function validateLanes(lanes: Lane[]): void {
   }
 }
 
+/** 現在の件数でこのレーンがもう1件受け入れられるか（WIP制限判定）。 */
+export function canAcceptMore(lane: Lane, currentCount: number): boolean {
+  return lane.wipLimit === null || currentCount < lane.wipLimit;
+}
+
 export function findDefaultEntryLane(lanes: Lane[]): Lane {
   return lanes.find((lane) => lane.isDefaultEntry)!;
 }

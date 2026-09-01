@@ -29,6 +29,13 @@ export function SettingsDialog({
     setLanes(lanes.map((lane, i) => (i === index ? { ...lane, name } : lane)));
   };
 
+  const setWipLimit = (index: number, raw: string) => {
+    const wipLimit = raw === "" ? null : Number(raw);
+    setLanes(
+      lanes.map((lane, i) => (i === index ? { ...lane, wipLimit } : lane)),
+    );
+  };
+
   const removeLane = (index: number) => {
     setLanes(lanes.filter((_, i) => i !== index));
   };
@@ -74,6 +81,16 @@ export function SettingsDialog({
                 aria-label={`レーン名（${lane.id}）`}
                 value={lane.name}
                 onChange={(e) => renameLane(index, e.target.value)}
+              />
+              <input
+                type="number"
+                min={1}
+                max={99}
+                className="settings-wip-input"
+                placeholder="WIP"
+                aria-label={`WIP制限（${lane.id}）`}
+                value={lane.wipLimit ?? ""}
+                onChange={(e) => setWipLimit(index, e.target.value)}
               />
               {lane.isDefaultEntry && (
                 <span className="settings-lane-tag">投入先</span>

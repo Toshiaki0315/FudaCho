@@ -18,7 +18,7 @@ describe("App", () => {
     const lanes = screen.getAllByRole("region");
     expect(lanes).toHaveLength(5);
     for (const name of ["未着手", "作業中", "完了", "クローズ", "中断"]) {
-      expect(screen.getByRole("heading", { name })).toBeInTheDocument();
+      expect(screen.getByRole("region", { name })).toBeInTheDocument();
     }
   });
 

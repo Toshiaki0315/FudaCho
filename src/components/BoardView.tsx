@@ -11,7 +11,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useState, type ReactNode } from "react";
-import type { Lane } from "../domain/lane";
+import { canAcceptMore, findDropLane, type Lane } from "../domain/lane";
 import { useBoardStore } from "../store/boardStore";
 import { ChildItemCard } from "./ChildItemCard";
 import { ChildItemDetail } from "./ChildItemDetail";
@@ -57,6 +57,13 @@ export function BoardView() {
   const laneNameOf = (laneId: string) =>
     settings.lanes.find((lane) => lane.id === laneId)!.name;
 
+  const laneCounts = Object.fromEntries(
+    settings.lanes.map((lane) => [lane.id, laneOrder[lane.id].length]),
+  );
+  const dropLane = findDropLane(settings.lanes);
+  const canDrop =
+    dropLane !== null && canAcceptMore(dropLane, laneCounts[dropLane.id]);
+
   const renderCard = (itemId: string, lane: Lane) => {
     const parent = parents[itemId];
     const card = parent ? (
@@ -75,6 +82,7 @@ export function BoardView() {
           <button
             type="button"
             className="drop-item-button"
+            disabled={!canDrop}
             onClick={() => dropItem(itemId)}
           >
             Drop
@@ -111,6 +119,7 @@ export function BoardView() {
       <KanbanBoard
         lanes={settings.lanes}
         laneContent={laneContent}
+        laneCounts={laneCounts}
         onAddItem={() => addParent({ summary: "新規アイテム" })}
       />
       {selectedParent && (

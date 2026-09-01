@@ -112,6 +112,64 @@ describe("boardStore", () => {
     });
   });
 
+  describe("WIP制限", () => {
+    function limitLane2To1() {
+      const { settings } = useBoardStore.getState();
+      useBoardStore.getState().updateSettings({
+        projectName: settings.projectName,
+        lanes: settings.lanes.map((lane) =>
+          lane.id === "lane-2" ? { ...lane, wipLimit: 1 } : lane,
+        ),
+      });
+    }
+
+    it("WIP制限に達したレーンへのmoveItemはエラーになる", () => {
+      limitLane2To1();
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      expect(() => useBoardStore.getState().moveItem("P-2", "lane-2")).toThrow(
+        /WIP/,
+      );
+    });
+
+    it("同一レーン内の位置変更はWIP制限の影響を受けない", () => {
+      limitLane2To1();
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      expect(() =>
+        useBoardStore.getState().moveItem("P-1", "lane-2", 0),
+      ).not.toThrow();
+    });
+
+    it("D&DでWIP制限に達したレーンへ移動しようとすると無視される", () => {
+      limitLane2To1();
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      useBoardStore.getState().handleDragEnd("P-2", "lane-2");
+      const state = useBoardStore.getState();
+      expect(state.parents["P-2"].laneId).toBe("lane-1");
+      expect(state.laneOrder["lane-2"]).toEqual(["P-1"]);
+    });
+
+    it("D&DでWIP制限レーン内のアイテム上へのドロップ（レーン間移動）も無視される", () => {
+      limitLane2To1();
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addParent({ summary: "B" });
+      useBoardStore.getState().moveItem("P-1", "lane-2");
+      useBoardStore.getState().handleDragEnd("P-2", "P-1");
+      expect(useBoardStore.getState().parents["P-2"].laneId).toBe("lane-1");
+    });
+
+    it("WIP制限内なら移動できる", () => {
+      limitLane2To1();
+      useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().handleDragEnd("P-1", "lane-2");
+      expect(useBoardStore.getState().parents["P-1"].laneId).toBe("lane-2");
+    });
+  });
+
   describe("reorderLane（レーン内並び替え = 優先順位変更）", () => {
     it("レーン内でアイテムの優先順位を入れ替える", () => {
       const store = useBoardStore.getState();

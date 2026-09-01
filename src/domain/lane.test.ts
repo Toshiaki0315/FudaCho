@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canAcceptMore,
   createDefaultLanes,
   createLane,
   findDefaultEntryLane,
@@ -145,6 +146,21 @@ describe("validateLanes", () => {
     expect(() =>
       validateLanes([createLane({ ...base, wipLimit: 99 })]),
     ).not.toThrow();
+  });
+});
+
+describe("canAcceptMore", () => {
+  it("WIP制限なしのレーンは常に受け入れ可能", () => {
+    const lane = createLane({ id: "lane-1", name: "A" });
+    expect(canAcceptMore(lane, 999)).toBe(true);
+  });
+
+  it("WIP制限未満なら受け入れ可能、以上なら不可", () => {
+    const lane = createLane({ id: "lane-1", name: "A", wipLimit: 2 });
+    expect(canAcceptMore(lane, 0)).toBe(true);
+    expect(canAcceptMore(lane, 1)).toBe(true);
+    expect(canAcceptMore(lane, 2)).toBe(false);
+    expect(canAcceptMore(lane, 3)).toBe(false);
   });
 });
 

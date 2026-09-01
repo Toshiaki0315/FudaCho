@@ -105,6 +105,39 @@ describe("SettingsDialog", () => {
     expect(ids).toContain("lane-5");
   });
 
+  it("レーン毎のWIP制限を設定して保存できる（空欄=制限なし）", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    renderDialog({ onSave });
+    const rows = screen.getAllByRole("listitem");
+    const wipInput = within(rows[1]).getByRole("spinbutton", {
+      name: /WIP/,
+    });
+    await user.type(wipInput, "3");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.lanes[1].wipLimit).toBe(3);
+    expect(saved.lanes[0].wipLimit).toBeNull();
+  });
+
+  it("WIP制限を空欄に戻すと制限なしとして保存される", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    const settings = createDefaultSettings();
+    settings.lanes = settings.lanes.map((lane) =>
+      lane.id === "lane-2" ? { ...lane, wipLimit: 5 } : lane,
+    );
+    renderDialog({ onSave, settings });
+    const rows = screen.getAllByRole("listitem");
+    const wipInput = within(rows[1]).getByRole("spinbutton", {
+      name: /WIP/,
+    });
+    expect(wipInput).toHaveValue(5);
+    await user.clear(wipInput);
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(onSave.mock.calls[0][0].lanes[1].wipLimit).toBeNull();
+  });
+
   it("「上へ」でレーンの順序を入れ替えて保存できる", async () => {
     const onSave = vi.fn();
     const user = userEvent.setup();

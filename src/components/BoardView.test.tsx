@@ -83,6 +83,23 @@ describe("BoardView", () => {
     expect(within(droppedLane).getByText("設計する")).toBeInTheDocument();
   });
 
+  it("Drop先レーンがWIP制限に達している場合はDropボタンが無効になる", () => {
+    const store = useBoardStore.getState();
+    const settings = store.settings;
+    store.updateSettings({
+      projectName: settings.projectName,
+      lanes: settings.lanes.map((lane) =>
+        lane.id === "lane-5" ? { ...lane, wipLimit: 1 } : lane,
+      ),
+    });
+    useBoardStore.getState().addParent({ summary: "A" });
+    useBoardStore.getState().addParent({ summary: "B" });
+    useBoardStore.getState().moveItem("P-1", "lane-5");
+    useBoardStore.getState().moveItem("P-2", "lane-2");
+    render(<BoardView />);
+    expect(screen.getByRole("button", { name: "Drop" })).toBeDisabled();
+  });
+
   it("親カードをダブルクリックすると詳細ビューが開きレーン名が表示される", async () => {
     const user = userEvent.setup();
     useBoardStore.getState().addParent({ summary: "設計する" });

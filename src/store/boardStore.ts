@@ -5,6 +5,7 @@ import {
   type CreateChildItemInput,
 } from "../domain/childItem";
 import {
+  canAcceptMore,
   findDefaultEntryLane,
   findDropLane,
   validateLanes,
@@ -157,9 +158,20 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   moveItem(itemId, toLaneId, index) {
-    const { parents, children } = get();
+    const { parents, children, settings, laneOrder } = get();
     if (!parents[itemId] && !children[itemId]) {
       throw new Error(`アイテム ${itemId} が見つかりません`);
+    }
+    const toLane = settings.lanes.find((lane) => lane.id === toLaneId);
+    const isLaneChange = !laneOrder[toLaneId]?.includes(itemId);
+    if (
+      toLane &&
+      isLaneChange &&
+      !canAcceptMore(toLane, laneOrder[toLaneId].length)
+    ) {
+      throw new Error(
+        `レーン「${toLane.name}」はWIP制限（${toLane.wipLimit}）に達しています`,
+      );
     }
     set((state) => {
       const laneOrder = moveToLane(state.laneOrder, itemId, toLaneId, index);
@@ -189,11 +201,17 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   handleDragEnd(activeId, overId) {
-    const action = resolveDragEnd(get().laneOrder, activeId, overId);
+    const { laneOrder, settings } = get();
+    const action = resolveDragEnd(laneOrder, activeId, overId);
     if (action === null) {
       return;
     }
     if (action.type === "move") {
+      // WIP制限に達したレーンへのD&Dは黙って無視する（ドラッグ操作を失敗にしない）
+      const toLane = settings.lanes.find((lane) => lane.id === action.toLaneId);
+      if (toLane && !canAcceptMore(toLane, laneOrder[action.toLaneId].length)) {
+        return;
+      }
       get().moveItem(activeId, action.toLaneId, action.index);
     } else {
       get().reorderLane(action.laneId, action.fromIndex, action.toIndex);
