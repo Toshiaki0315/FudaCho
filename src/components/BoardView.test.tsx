@@ -81,6 +81,78 @@ describe("BoardView", () => {
     expect(within(droppedLane).getByText("設計する")).toBeInTheDocument();
   });
 
+  it("親カードをダブルクリックすると詳細ビューが開く", async () => {
+    const user = userEvent.setup();
+    useBoardStore.getState().addParent({ summary: "設計する" });
+    render(<BoardView />);
+    await user.dblClick(screen.getByText("設計する"));
+    expect(
+      screen.getByRole("dialog", { name: "P-1 の詳細" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("概要")).toHaveValue("設計する");
+  });
+
+  it("親詳細ビューで編集して保存するとカードに反映されダイアログが閉じる", async () => {
+    const user = userEvent.setup();
+    useBoardStore.getState().addParent({ summary: "設計する" });
+    render(<BoardView />);
+    await user.dblClick(screen.getByText("設計する"));
+    const summary = screen.getByLabelText("概要");
+    await user.clear(summary);
+    await user.type(summary, "詳細設計する");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("詳細設計する")).toBeInTheDocument();
+    expect(useBoardStore.getState().parents["P-1"].summary).toBe(
+      "詳細設計する",
+    );
+  });
+
+  it("子カードをダブルクリックすると子詳細ビューが開き、保存で反映される", async () => {
+    const user = userEvent.setup();
+    const parentId = useBoardStore.getState().addParent({ summary: "設計" });
+    useBoardStore.getState().addChild({ parentId, description: "図を描く" });
+    render(<BoardView />);
+    await user.dblClick(screen.getByText("図を描く"));
+    expect(
+      screen.getByRole("dialog", { name: "C-1 の詳細" }),
+    ).toBeInTheDocument();
+    const description = screen.getByLabelText("作業内容");
+    await user.clear(description);
+    await user.type(description, "詳細図を描く");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("詳細図を描く")).toBeInTheDocument();
+  });
+
+  it("詳細ビューをキャンセルすると変更されずに閉じる", async () => {
+    const user = userEvent.setup();
+    useBoardStore.getState().addParent({ summary: "設計する" });
+    render(<BoardView />);
+    await user.dblClick(screen.getByText("設計する"));
+    const summary = screen.getByLabelText("概要");
+    await user.clear(summary);
+    await user.type(summary, "変更したが保存しない");
+    await user.click(screen.getByRole("button", { name: "キャンセル" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(useBoardStore.getState().parents["P-1"].summary).toBe("設計する");
+  });
+
+  it("親詳細ビューから子アイテムを追加できる", async () => {
+    const user = userEvent.setup();
+    useBoardStore.getState().addParent({ summary: "設計する" });
+    render(<BoardView />);
+    await user.dblClick(screen.getByText("設計する"));
+    await user.click(
+      screen.getByRole("button", { name: "＋子アイテムを追加" }),
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const state = useBoardStore.getState();
+    expect(state.parents["P-1"].childIds).toEqual(["C-1"]);
+    const todoLane = screen.getByRole("region", { name: "未着手" });
+    expect(within(todoLane).getByText("C-1")).toBeInTheDocument();
+  });
+
   it("カードはドラッグ可能である（ドラッグ属性を持つ）", () => {
     useBoardStore.getState().addParent({ summary: "設計する" });
     render(<BoardView />);

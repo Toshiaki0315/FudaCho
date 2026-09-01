@@ -10,12 +10,14 @@ interface ParentItemDetailProps {
   item: ParentItem;
   onSave: (patch: ParentItemPatch) => void;
   onClose: () => void;
+  onAddChild?: () => void;
 }
 
 export function ParentItemDetail({
   item,
   onSave,
   onClose,
+  onAddChild,
 }: ParentItemDetailProps) {
   const [summary, setSummary] = useState(item.summary);
   const [size, setSize] = useState<Size>(item.size);
@@ -101,6 +103,11 @@ export function ParentItemDetail({
           />
         </label>
         <footer className="item-detail-footer">
+          {onAddChild && (
+            <button type="button" onClick={onAddChild}>
+              ＋子アイテムを追加
+            </button>
+          )}
           <button type="button" onClick={onClose}>
             キャンセル
           </button>
