@@ -157,6 +157,28 @@ describe("BoardView", () => {
     expect(screen.getByText("親: P-1")).toBeInTheDocument();
   });
 
+  it("親詳細の子アイテム一覧から子の詳細を開ける", async () => {
+    const user = userEvent.setup();
+    const parentId = useBoardStore
+      .getState()
+      .addParent({ summary: "設計する" });
+    useBoardStore.getState().addChild({ parentId, description: "図を描く" });
+    useBoardStore.getState().moveItem("C-1", "lane-3");
+    render(<BoardView />);
+    await user.dblClick(screen.getByText("設計する"));
+    const list = screen.getByRole("list", { name: "子アイテム" });
+    const row = within(list).getByRole("button");
+    expect(row).toHaveTextContent("図を描く");
+    expect(row).toHaveTextContent("作業中");
+    await user.click(row);
+    expect(
+      screen.getByRole("dialog", { name: "C-1 の詳細" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "P-1 の詳細" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("詳細ビューをキャンセルすると変更されずに閉じる", async () => {
     const user = userEvent.setup();
     useBoardStore.getState().addParent({ summary: "設計する" });

@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { createChildItem } from "../domain/childItem";
 import { createParentItem } from "../domain/parentItem";
 import { ParentItemDetail } from "./ParentItemDetail";
 
@@ -26,6 +27,9 @@ function renderDetail(
     <ParentItemDetail
       item={buildItem()}
       laneName="作業中"
+      children_={[]}
+      laneNameOf={() => "SBL"}
+      onOpenChild={vi.fn()}
       onSave={vi.fn()}
       onClose={vi.fn()}
       {...overrides}
@@ -34,6 +38,57 @@ function renderDetail(
 }
 
 describe("ParentItemDetail", () => {
+  describe("子アイテム一覧", () => {
+    const children_ = [
+      createChildItem({
+        id: "C-1",
+        title: "図面作成",
+        parentId: "P-1",
+        description: "ワイヤーフレームを描く",
+        laneId: "lane-2",
+      }),
+      createChildItem({
+        id: "C-2",
+        parentId: "P-1",
+        description: "レビューする",
+        laneId: "lane-3",
+      }),
+    ];
+
+    it("子アイテムのタイトル（なければID）・作業内容・レーン名が一覧表示される", () => {
+      renderDetail({
+        children_,
+        laneNameOf: (laneId) => (laneId === "lane-2" ? "SBL" : "作業中"),
+      });
+      const list = screen.getByRole("list", { name: "子アイテム" });
+      const rows = within(list).getAllByRole("listitem");
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toHaveTextContent("図面作成");
+      expect(rows[0]).toHaveTextContent("ワイヤーフレームを描く");
+      expect(rows[0]).toHaveTextContent("SBL");
+      expect(rows[1]).toHaveTextContent("C-2");
+      expect(rows[1]).toHaveTextContent("レビューする");
+      expect(rows[1]).toHaveTextContent("作業中");
+    });
+
+    it("子アイテムの行をクリックするとonOpenChildが呼ばれる", async () => {
+      const onOpenChild = vi.fn();
+      const user = userEvent.setup();
+      renderDetail({ children_, onOpenChild });
+      const list = screen.getByRole("list", { name: "子アイテム" });
+      await user.click(within(list).getAllByRole("button")[1]);
+      expect(onOpenChild).toHaveBeenCalledWith("C-2");
+    });
+
+    it("子アイテムがない場合は「なし」と表示される", () => {
+      renderDetail();
+      const section = screen.getByText("子アイテム").closest("section")!;
+      expect(
+        within(section as HTMLElement).getByText("なし"),
+      ).toBeInTheDocument();
+    });
+  });
+
   it("ダイアログとして表示され、全フィールドの現在値が表示される", () => {
     renderDetail();
     expect(screen.getByRole("dialog")).toBeInTheDocument();

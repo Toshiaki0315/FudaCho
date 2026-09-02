@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ChildItem } from "../domain/childItem";
 import {
   FIBONACCI_SIZES,
   isReadyEligible,
@@ -11,6 +12,12 @@ interface ParentItemDetailProps {
   item: ParentItem;
   /** 現在所属するレーンの表示名（読み取り専用。移動はD&Dで行う） */
   laneName: string;
+  /** この親に属する子アイテム（一覧表示用） */
+  children_: ChildItem[];
+  /** レーンIDから表示名を引く（子アイテムの現在レーン表示用） */
+  laneNameOf: (laneId: string) => string;
+  /** 子アイテム行のクリックでその子の詳細を開く */
+  onOpenChild: (childId: string) => void;
   onSave: (patch: ParentItemPatch) => void;
   onClose: () => void;
   onAddChild?: () => void;
@@ -19,6 +26,9 @@ interface ParentItemDetailProps {
 export function ParentItemDetail({
   item,
   laneName,
+  children_,
+  laneNameOf,
+  onOpenChild,
   onSave,
   onClose,
   onAddChild,
@@ -192,6 +202,30 @@ export function ParentItemDetail({
               onChange={(e) => setNotes(e.target.value)}
             />
           </label>
+          <section className="child-items-section">
+            <p className="comments-title">子アイテム</p>
+            {children_.length === 0 ? (
+              <p className="child-items-empty">なし</p>
+            ) : (
+              <ul className="child-items-list" aria-label="子アイテム">
+                {children_.map((child) => (
+                  <li key={child.id}>
+                    <button type="button" onClick={() => onOpenChild(child.id)}>
+                      <span className="child-item-name">
+                        {child.title !== "" ? child.title : child.id}
+                      </span>
+                      <span className="child-item-desc">
+                        {child.description}
+                      </span>
+                      <span className="child-item-lane">
+                        {laneNameOf(child.laneId)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <section className="labels-section">
             <p className="comments-title">ラベル</p>
             {labels.length > 0 && (

@@ -297,6 +297,11 @@ export function BoardView() {
         <ParentItemDetail
           item={selectedParent}
           laneName={laneOf(selectedParent.laneId).name}
+          children_={selectedParent.childIds.map(
+            (childId) => children[childId],
+          )}
+          laneNameOf={(laneId) => laneOf(laneId).name}
+          onOpenChild={(childId) => setSelectedId(childId)}
           onSave={(patch) => {
             updateParent(selectedParent.id, patch);
             closeDetail();

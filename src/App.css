@@ -585,6 +585,63 @@ body {
   cursor: pointer;
 }
 
+/* 親詳細内の子アイテム一覧（クリックで子の詳細へ） */
+.child-items-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #57606a;
+}
+
+.child-items-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.child-items-list button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  background-color: #ffffff;
+  cursor: pointer;
+}
+
+.child-items-list button:hover {
+  background-color: #f6f8fa;
+}
+
+.child-items-list .child-item-name {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.child-items-list .child-item-desc {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #57606a;
+}
+
+.child-items-list .child-item-lane {
+  flex: none;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: #0969da;
+  background-color: #ddf4ff;
+}
+
 /* 固定レーンと自由レーンのセクション境界（薄い区切り線） */
 .settings-lane-divider {
   border-top: 1px solid #d8dee4;
