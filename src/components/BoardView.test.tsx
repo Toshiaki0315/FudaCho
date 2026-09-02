@@ -209,6 +209,141 @@ describe("BoardView", () => {
     expect(within(sblLane).getByText("C-1")).toBeInTheDocument();
   });
 
+  describe("親アイテムによる絞り込み", () => {
+    function seedTwoFamilies() {
+      const p1 = useBoardStore
+        .getState()
+        .addParent({ title: "画面設計", summary: "設計する" });
+      useBoardStore
+        .getState()
+        .addChild({ parentId: p1, description: "図を描く" });
+      const p2 = useBoardStore.getState().addParent({ summary: "実装する" });
+      useBoardStore
+        .getState()
+        .addChild({ parentId: p2, description: "コードを書く" });
+      useBoardStore.getState().addChild({ description: "独立タスク" });
+      return { p1, p2 };
+    }
+
+    it("親カードの右クリックメニューから絞り込むと、その親と子だけが表示される", async () => {
+      const user = userEvent.setup();
+      seedTwoFamilies();
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "この親で絞り込み" }),
+      );
+      expect(screen.getByText("設計する")).toBeInTheDocument();
+      expect(screen.getByText("図を描く")).toBeInTheDocument();
+      expect(screen.queryByText("実装する")).not.toBeInTheDocument();
+      expect(screen.queryByText("コードを書く")).not.toBeInTheDocument();
+      expect(screen.queryByText("独立タスク")).not.toBeInTheDocument();
+    });
+
+    it("子カードの右クリックメニューには親絞り込みは表示されない", () => {
+      seedTwoFamilies();
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("独立タスク"));
+      expect(
+        screen.queryByRole("menuitem", { name: "この親で絞り込み" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("フィルターバーに親のタイトルが表示され、✕チップで解除できる", async () => {
+      const user = userEvent.setup();
+      seedTwoFamilies();
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "この親で絞り込み" }),
+      );
+      const chip = screen.getByRole("button", {
+        name: "親アイテム「画面設計」の絞り込みを解除",
+      });
+      expect(chip).toHaveTextContent("画面設計");
+      await user.click(chip);
+      expect(screen.getByText("実装する")).toBeInTheDocument();
+      expect(screen.getByText("独立タスク")).toBeInTheDocument();
+      expect(screen.queryByText(/絞り込み中/)).not.toBeInTheDocument();
+    });
+
+    it("タイトルのない親はIDでフィルターバーに表示される", async () => {
+      const user = userEvent.setup();
+      seedTwoFamilies();
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("実装する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "この親で絞り込み" }),
+      );
+      expect(
+        screen.getByRole("button", {
+          name: "親アイテム「P-2」の絞り込みを解除",
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it("絞り込み中の親の右クリックメニューは「絞り込みを解除」になりトグルできる", async () => {
+      const user = userEvent.setup();
+      seedTwoFamilies();
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "この親で絞り込み" }),
+      );
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "絞り込みを解除" }),
+      );
+      expect(screen.getByText("実装する")).toBeInTheDocument();
+    });
+
+    it("すべて解除でラベルと親の絞り込みが同時に解除される", async () => {
+      const user = userEvent.setup();
+      const { p1 } = seedTwoFamilies();
+      useBoardStore.getState().updateParent(p1, { labels: ["設計"] });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "この親で絞り込み" }),
+      );
+      await user.click(screen.getAllByText("設計")[0]);
+      await user.click(screen.getByRole("button", { name: "すべて解除" }));
+      expect(screen.queryByText(/絞り込み中/)).not.toBeInTheDocument();
+      expect(screen.getByText("独立タスク")).toBeInTheDocument();
+    });
+
+    it("ラベル絞り込みとAND条件で併用される", async () => {
+      const user = userEvent.setup();
+      const { p1, p2 } = seedTwoFamilies();
+      useBoardStore.getState().updateParent(p1, { labels: ["設計"] });
+      useBoardStore.getState().updateParent(p2, { labels: ["設計"] });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "この親で絞り込み" }),
+      );
+      // ラベル「設計」はP-2にも付いているが、親絞り込みとのANDでP-1系のみ残る
+      await user.click(screen.getAllByText("設計")[0]);
+      expect(screen.getByText("設計する")).toBeInTheDocument();
+      expect(screen.getByText("図を描く")).toBeInTheDocument();
+      expect(screen.queryByText("実装する")).not.toBeInTheDocument();
+    });
+
+    it("絞り込み中の親を削除すると絞り込みは無効になり全アイテムが表示される", async () => {
+      const user = userEvent.setup();
+      seedTwoFamilies();
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "この親で絞り込み" }),
+      );
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(screen.getByRole("menuitem", { name: "削除" }));
+      expect(screen.getByText("実装する")).toBeInTheDocument();
+      expect(screen.getByText("独立タスク")).toBeInTheDocument();
+    });
+  });
+
   describe("ラベルと絞り込み", () => {
     function seedLabeledBoard() {
       const p1 = useBoardStore
@@ -304,6 +439,7 @@ describe("BoardView", () => {
       const items = screen.getAllByRole("menuitem");
       expect(items.map((i) => i.textContent)).toEqual([
         "詳細表示",
+        "この親で絞り込み",
         "Drop",
         "削除",
       ]);

@@ -61,6 +61,8 @@ export function BoardView() {
   const [activeId, setActiveId] = useState<string | null>(null);
   // ラベル絞り込み（AND条件）。カードのラベルチップをクリックで追加/解除する
   const [labelFilters, setLabelFilters] = useState<string[]>([]);
+  // 親アイテム絞り込み。親カードの右クリックメニューで設定し、その親と子だけを表示する
+  const [parentFilter, setParentFilter] = useState<string | null>(null);
   // 右クリックで開くコンテキストメニュー
   const [contextMenu, setContextMenu] = useState<{
     itemId: string;
@@ -103,7 +105,20 @@ export function BoardView() {
     return mergeLabels(parentLabels, child.labels);
   };
 
-  const matchesFilter = (itemId: string) => {
+  // 絞り込み対象の親が削除された場合は絞り込みを無効化する
+  const activeParentFilter =
+    parentFilter !== null && parents[parentFilter] !== undefined
+      ? parentFilter
+      : null;
+
+  const matchesParentFilter = (itemId: string) => {
+    if (activeParentFilter === null || itemId === activeParentFilter) {
+      return true;
+    }
+    return children[itemId]?.parentId === activeParentFilter;
+  };
+
+  const matchesLabelFilter = (itemId: string) => {
     if (labelFilters.length === 0) {
       return true;
     }
@@ -111,6 +126,9 @@ export function BoardView() {
     const itemLabels = parent ? parent.labels : effectiveLabelsOf(itemId);
     return labelFilters.every((label) => itemLabels.includes(label));
   };
+
+  const matchesFilter = (itemId: string) =>
+    matchesParentFilter(itemId) && matchesLabelFilter(itemId);
 
   const renderCard = (itemId: string) => {
     const parent = parents[itemId];
@@ -191,6 +209,16 @@ export function BoardView() {
     contextMenuLaneRole !== "close" &&
     contextMenuLaneRole !== "drop";
 
+  // フィルターバーに表示する親の名前（タイトル優先、なければID）
+  const filterParent =
+    activeParentFilter !== null ? parents[activeParentFilter] : null;
+  const filterParentName =
+    filterParent !== null
+      ? filterParent.title !== ""
+        ? filterParent.title
+        : filterParent.id
+      : "";
+
   return (
     <DndContext
       sensors={sensors}
@@ -201,9 +229,19 @@ export function BoardView() {
         applyDragEnd(event);
       }}
     >
-      {labelFilters.length > 0 && (
+      {(labelFilters.length > 0 || activeParentFilter !== null) && (
         <div className="label-filter-bar">
-          <span>ラベルで絞り込み中:</span>
+          <span>絞り込み中:</span>
+          {activeParentFilter !== null && (
+            <button
+              type="button"
+              className="label-chip parent-filter-chip"
+              aria-label={`親アイテム「${filterParentName}」の絞り込みを解除`}
+              onClick={() => setParentFilter(null)}
+            >
+              親: {filterParentName} ✕
+            </button>
+          )}
           {labelFilters.map((label) => (
             <button
               key={label}
@@ -215,7 +253,13 @@ export function BoardView() {
               {label} ✕
             </button>
           ))}
-          <button type="button" onClick={() => setLabelFilters([])}>
+          <button
+            type="button"
+            onClick={() => {
+              setLabelFilters([]);
+              setParentFilter(null);
+            }}
+          >
             すべて解除
           </button>
         </div>
@@ -258,6 +302,24 @@ export function BoardView() {
             >
               詳細表示
             </button>
+            {parents[contextMenu.itemId] !== undefined && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setParentFilter(
+                    parentFilter === contextMenu.itemId
+                      ? null
+                      : contextMenu.itemId,
+                  );
+                  setContextMenu(null);
+                }}
+              >
+                {parentFilter === contextMenu.itemId
+                  ? "絞り込みを解除"
+                  : "この親で絞り込み"}
+              </button>
+            )}
             {showDropMenu && (
               <button
                 type="button"
