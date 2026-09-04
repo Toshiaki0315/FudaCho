@@ -20,7 +20,13 @@ export function ChildItemCard({
   // SBLには親ありの子と親なしの子が並ぶため、カード上で区別できるようにする
   const hasParent = item.parentId !== null;
   return (
-    <article className="item-card child-item-card">
+    <article
+      className={
+        hasParent
+          ? "item-card child-item-card"
+          : "item-card child-item-card standalone-child"
+      }
+    >
       <span className="item-badge" role="img" aria-label="子アイテム">
         📝
       </span>

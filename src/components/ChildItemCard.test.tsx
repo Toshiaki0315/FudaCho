@@ -74,4 +74,36 @@ describe("ChildItemCard", () => {
     expect(screen.getByText("親なし")).toBeInTheDocument();
     expect(screen.queryByText(/^親: /)).not.toBeInTheDocument();
   });
+
+  it("親のない子アイテムのカードには独立を示すクラスが付く（左端の色分け）", () => {
+    const { container } = render(
+      <ChildItemCard
+        item={createChildItem({
+          id: "C-2",
+          parentId: null,
+          description: "単独作業",
+          laneId: "lane-2",
+        })}
+      />,
+    );
+    expect(container.querySelector(".item-card")).toHaveClass(
+      "standalone-child",
+    );
+  });
+
+  it("親のある子アイテムのカードには独立を示すクラスが付かない", () => {
+    const { container } = render(
+      <ChildItemCard
+        item={createChildItem({
+          id: "C-1",
+          parentId: "P-1",
+          description: "作業",
+          laneId: "lane-2",
+        })}
+      />,
+    );
+    expect(container.querySelector(".item-card")).not.toHaveClass(
+      "standalone-child",
+    );
+  });
 });

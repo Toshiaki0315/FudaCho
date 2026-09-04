@@ -408,12 +408,17 @@ body {
   transform: translateY(-1px);
 }
 
+/* カード左端の色でアイテムの種類を示す: 親=青、親のいる子=紫、親のいない子=赤 */
 .parent-item-card {
   border-left: 4px solid #0969da;
 }
 
 .child-item-card {
   border-left: 4px solid #8250df;
+}
+
+.child-item-card.standalone-child {
+  border-left-color: #cf222e;
 }
 
 .item-id {
