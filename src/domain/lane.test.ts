@@ -3,6 +3,7 @@ import {
   canAcceptMore,
   createDefaultLanes,
   createLane,
+  wipLimitReachedMessage,
   findLaneByRole,
   isFixedRole,
   validateLanes,
@@ -183,5 +184,14 @@ describe("canAcceptMore", () => {
     const lane = createLane({ id: "l1", name: "A", wipLimit: 2 });
     expect(canAcceptMore(lane, 1)).toBe(true);
     expect(canAcceptMore(lane, 2)).toBe(false);
+  });
+});
+
+describe("wipLimitReachedMessage", () => {
+  it("レーン名とWIP制限を含む通知文を返す", () => {
+    const lane = createLane({ id: "lane-3", name: "作業中", wipLimit: 2 });
+    expect(wipLimitReachedMessage(lane)).toBe(
+      "レーン「作業中」はWIP制限（2）に達しているため移動できません",
+    );
   });
 });

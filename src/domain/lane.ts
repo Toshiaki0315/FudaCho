@@ -102,3 +102,8 @@ export function findLaneByRole(
 export function canAcceptMore(lane: Lane, currentCount: number): boolean {
   return lane.wipLimit === null || currentCount < lane.wipLimit;
 }
+
+/** WIP制限に達して移動できないことをユーザーへ伝える通知文。 */
+export function wipLimitReachedMessage(lane: Lane): string {
+  return `レーン「${lane.name}」はWIP制限（${lane.wipLimit}）に達しているため移動できません`;
+}

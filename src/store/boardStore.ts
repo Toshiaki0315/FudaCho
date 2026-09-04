@@ -4,7 +4,12 @@ import {
   type ChildItem,
   type CreateChildItemInput,
 } from "../domain/childItem";
-import { canAcceptMore, findLaneByRole, validateLanes } from "../domain/lane";
+import {
+  canAcceptMore,
+  findLaneByRole,
+  validateLanes,
+  wipLimitReachedMessage,
+} from "../domain/lane";
 import { changeLane } from "../domain/laneChange";
 import {
   createEmptyLaneOrder,
@@ -235,7 +240,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       return "子アイテムはPBLレーンへ移動できません";
     }
     if (!canAcceptMore(toLane, laneOrder[toLaneId].length)) {
-      return `レーン「${toLane.name}」はWIP制限（${toLane.wipLimit}）に達しているため移動できません`;
+      return wipLimitReachedMessage(toLane);
     }
     return null;
   },
@@ -324,9 +329,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       dropLane.wipLimit !== null &&
       laneOrder[dropLane.id].length + targets.length > dropLane.wipLimit
     ) {
-      set({
-        notice: `レーン「${dropLane.name}」はWIP制限（${dropLane.wipLimit}）に達しているため移動できません`,
-      });
+      set({ notice: wipLimitReachedMessage(dropLane) });
       return;
     }
     for (const id of targets) {
