@@ -10,8 +10,11 @@ interface ChildItemDetailProps {
   parentName: string;
   /** 現在所属するレーンの表示名（読み取り専用。移動はD&Dで行う） */
   laneName: string;
-  onSave: (patch: ChildItemPatch) => void;
+  /** 保存内容。作業内容は常に含まれる（未入力なら空文字） */
+  onSave: (patch: ChildItemPatch & { description: string }) => void;
   onClose: () => void;
+  /** 新規作成中（まだ採番されておらず、保存で初めてボードに載る） */
+  isNew?: boolean;
 }
 
 export function ChildItemDetail({
@@ -21,6 +24,7 @@ export function ChildItemDetail({
   laneName,
   onSave,
   onClose,
+  isNew = false,
 }: ChildItemDetailProps) {
   const [title, setTitle] = useState(item.title);
   const [description, setDescription] = useState(item.description);
@@ -83,11 +87,11 @@ export function ChildItemDetail({
     <div className="modal-backdrop">
       <div
         role="dialog"
-        aria-label={`${item.id} の詳細`}
+        aria-label={isNew ? "新規子アイテムの詳細" : `${item.id} の詳細`}
         className="item-detail"
       >
         <header className="item-detail-header">
-          <span className="item-id">{item.id}</span>
+          <span className="item-id">{isNew ? "新規" : item.id}</span>
           <span className="item-parent-id">親: {parentName}</span>
           <span className="item-status">{laneName}</span>
         </header>

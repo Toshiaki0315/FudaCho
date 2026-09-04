@@ -376,4 +376,25 @@ describe("ParentItemDetail", () => {
     );
     expect(onAddChild).toHaveBeenCalledTimes(1);
   });
+
+  describe("新規作成モード", () => {
+    it("IDの代わりに「新規」と表示する（まだ採番されていないため）", () => {
+      renderDetail({ isNew: true });
+      expect(
+        screen.getByRole("dialog", { name: "新規親アイテムの詳細" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("新規")).toBeInTheDocument();
+      expect(screen.queryByText("P-1")).not.toBeInTheDocument();
+    });
+
+    it("入力した内容が保存時にそのまま渡される", async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn();
+      renderDetail({ isNew: true, onSave });
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ summary: "設計する" }),
+      );
+    });
+  });
 });

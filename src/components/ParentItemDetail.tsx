@@ -19,9 +19,12 @@ interface ParentItemDetailProps {
   laneNameOf: (laneId: string) => string;
   /** 子アイテム行のクリックでその子の詳細を開く */
   onOpenChild: (childId: string) => void;
-  onSave: (patch: ParentItemPatch) => void;
+  /** 保存内容。概要は常に含まれる（未入力なら空文字） */
+  onSave: (patch: ParentItemPatch & { summary: string }) => void;
   onClose: () => void;
   onAddChild?: () => void;
+  /** 新規作成中（まだ採番されておらず、保存で初めてボードに載る） */
+  isNew?: boolean;
 }
 
 export function ParentItemDetail({
@@ -33,6 +36,7 @@ export function ParentItemDetail({
   onSave,
   onClose,
   onAddChild,
+  isNew = false,
 }: ParentItemDetailProps) {
   const [title, setTitle] = useState(item.title);
   const [summary, setSummary] = useState(item.summary);
@@ -107,11 +111,11 @@ export function ParentItemDetail({
     <div className="modal-backdrop">
       <div
         role="dialog"
-        aria-label={`${item.id} の詳細`}
+        aria-label={isNew ? "新規親アイテムの詳細" : `${item.id} の詳細`}
         className="item-detail"
       >
         <header className="item-detail-header">
-          <span className="item-id">{item.id}</span>
+          <span className="item-id">{isNew ? "新規" : item.id}</span>
           <span className="item-status">{laneName}</span>
         </header>
         <div className="item-detail-body">

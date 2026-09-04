@@ -23,26 +23,99 @@ describe("BoardView", () => {
     expect(within(sblLane).getByText("図を描く")).toBeInTheDocument();
   });
 
-  it("PBLの「＋新規作成」で親アイテムが追加される", async () => {
-    const user = userEvent.setup();
-    render(<BoardView />);
-    const pblLane = screen.getByRole("region", { name: "PBL" });
-    await user.click(
-      within(pblLane).getByRole("button", { name: "＋新規作成" }),
-    );
-    expect(within(pblLane).getByText("P-1")).toBeInTheDocument();
-    expect(useBoardStore.getState().parents["P-1"].laneId).toBe("lane-1");
-  });
+  describe("新規作成（保存するまでボードに載せない）", () => {
+    const clickNew = (user: ReturnType<typeof userEvent.setup>, lane: string) =>
+      user.click(
+        within(screen.getByRole("region", { name: lane })).getByRole("button", {
+          name: "＋新規作成",
+        }),
+      );
 
-  it("SBLの「＋新規作成」で親なしの子アイテムが追加される", async () => {
-    const user = userEvent.setup();
-    render(<BoardView />);
-    const sblLane = screen.getByRole("region", { name: "SBL" });
-    await user.click(
-      within(sblLane).getByRole("button", { name: "＋新規作成" }),
-    );
-    expect(within(sblLane).getByText("C-1")).toBeInTheDocument();
-    expect(useBoardStore.getState().children["C-1"].parentId).toBeNull();
+    it("PBLの「＋新規作成」では詳細ダイアログだけが開き、まだ作成されない", async () => {
+      const user = userEvent.setup();
+      render(<BoardView />);
+      await clickNew(user, "PBL");
+      expect(
+        screen.getByRole("dialog", { name: "新規親アイテムの詳細" }),
+      ).toBeInTheDocument();
+      expect(useBoardStore.getState().parents).toEqual({});
+    });
+
+    it("保存すると入力内容で親アイテムがPBLに作成される", async () => {
+      const user = userEvent.setup();
+      render(<BoardView />);
+      await clickNew(user, "PBL");
+      await user.type(screen.getByLabelText("概要"), "設計する");
+      await user.type(screen.getByLabelText("タイトル"), "画面設計");
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      const parent = useBoardStore.getState().parents["P-1"];
+      expect(parent.summary).toBe("設計する");
+      expect(parent.title).toBe("画面設計");
+      expect(parent.laneId).toBe("lane-1");
+      const pblLane = screen.getByRole("region", { name: "PBL" });
+      expect(within(pblLane).getByText("画面設計")).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("キャンセルすると親アイテムは作成されない", async () => {
+      const user = userEvent.setup();
+      render(<BoardView />);
+      await clickNew(user, "PBL");
+      await user.type(screen.getByLabelText("概要"), "設計する");
+      await user.click(screen.getByRole("button", { name: "キャンセル" }));
+      expect(useBoardStore.getState().parents).toEqual({});
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    it("SBLの「＋新規作成」は保存で親なしの子アイテムを作成する", async () => {
+      const user = userEvent.setup();
+      render(<BoardView />);
+      await clickNew(user, "SBL");
+      expect(
+        screen.getByRole("dialog", { name: "新規子アイテムの詳細" }),
+      ).toBeInTheDocument();
+      expect(useBoardStore.getState().children).toEqual({});
+      await user.type(screen.getByLabelText("作業内容"), "調査する");
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      const child = useBoardStore.getState().children["C-1"];
+      expect(child.description).toBe("調査する");
+      expect(child.parentId).toBeNull();
+      expect(child.laneId).toBe("lane-2");
+    });
+
+    it("SBLの新規作成をキャンセルすると子アイテムは作成されない", async () => {
+      const user = userEvent.setup();
+      render(<BoardView />);
+      await clickNew(user, "SBL");
+      await user.click(screen.getByRole("button", { name: "キャンセル" }));
+      expect(useBoardStore.getState().children).toEqual({});
+    });
+
+    it("親詳細の「＋子アイテムを追加」も保存するまで作成しない", async () => {
+      const user = userEvent.setup();
+      useBoardStore
+        .getState()
+        .addParent({ summary: "設計する", reason: "理由", ready: true });
+      render(<BoardView />);
+      await user.dblClick(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("button", { name: "＋子アイテムを追加" }),
+      );
+      expect(
+        screen.getByRole("dialog", { name: "新規子アイテムの詳細" }),
+      ).toBeInTheDocument();
+      expect(useBoardStore.getState().children).toEqual({});
+      await user.type(screen.getByLabelText("作業内容"), "図を描く");
+      await user.click(screen.getByRole("button", { name: "保存" }));
+      const child = useBoardStore.getState().children["C-1"];
+      expect(child.parentId).toBe("P-1");
+      expect(child.description).toBe("図を描く");
+      expect(child.laneId).toBe("lane-2");
+      expect(useBoardStore.getState().parents["P-1"].childIds).toEqual(["C-1"]);
+      const sblLane = screen.getByRole("region", { name: "SBL" });
+      expect(within(sblLane).getByText("C-1")).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
   });
 
   it("レーン内の優先順位どおりの順序でカードを表示する", () => {
@@ -195,24 +268,6 @@ describe("BoardView", () => {
     expect(useBoardStore.getState().parents["P-1"].summary).toBe("設計する");
   });
 
-  it("Readyな親の詳細ビューから子アイテムを追加するとSBLに作成される", async () => {
-    const user = userEvent.setup();
-    useBoardStore
-      .getState()
-      .addParent({ summary: "設計する", reason: "理由", ready: true });
-    render(<BoardView />);
-    await user.dblClick(screen.getByText("設計する"));
-    await user.click(
-      screen.getByRole("button", { name: "＋子アイテムを追加" }),
-    );
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    const state = useBoardStore.getState();
-    expect(state.parents["P-1"].childIds).toEqual(["C-1"]);
-    expect(state.children["C-1"].laneId).toBe("lane-2");
-    const sblLane = screen.getByRole("region", { name: "SBL" });
-    expect(within(sblLane).getByText("C-1")).toBeInTheDocument();
-  });
-
   describe("親アイテムによる絞り込み", () => {
     function seedTwoFamilies() {
       const p1 = useBoardStore
@@ -254,13 +309,15 @@ describe("BoardView", () => {
       await user.click(
         screen.getByRole("menuitem", { name: "＋子アイテムを追加" }),
       );
+      // メニューは閉じ、詳細ダイアログが開く（この時点ではまだ作成しない）
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+      expect(useBoardStore.getState().children).toEqual({});
+      await user.click(screen.getByRole("button", { name: "保存" }));
       const state = useBoardStore.getState();
       expect(state.children["C-1"].parentId).toBe("P-1");
       // 作成先はSBLレーン
       expect(state.children["C-1"].laneId).toBe("lane-2");
       expect(state.parents["P-1"].childIds).toEqual(["C-1"]);
-      // メニューは閉じる
-      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     });
 
     it("Readyでない親の右クリックメニューでは子アイテムを追加できない", () => {

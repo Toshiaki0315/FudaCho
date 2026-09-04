@@ -12,8 +12,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useEffect, useState, type ReactNode } from "react";
+import { createChildItem } from "../domain/childItem";
 import { displayName } from "../domain/itemName";
 import { canAcceptMore, findLaneByRole } from "../domain/lane";
+import { createParentItem } from "../domain/parentItem";
 import { useBoardStore } from "../store/boardStore";
 import { ChildItemCard } from "./ChildItemCard";
 import { ChildItemDetail } from "./ChildItemDetail";
@@ -72,6 +74,10 @@ export function BoardView() {
     clearAll,
     matchesFilter,
   } = useItemFilters(parents, children);
+  // 新規作成の下書き。保存するまでストアには載せない
+  const [draft, setDraft] = useState<
+    { kind: "parent" } | { kind: "child"; parentId: string | null } | null
+  >(null);
   // 右クリックで開くコンテキストメニュー
   const [contextMenu, setContextMenu] = useState<{
     itemId: string;
@@ -91,6 +97,25 @@ export function BoardView() {
   // アイテムのあるレーンは削除できない（updateSettingsが保証）ため、レーンは必ず見つかる
   const laneOf = (laneId: string) =>
     settings.lanes.find((lane) => lane.id === laneId)!;
+
+  const laneNameOf = (laneId: string) => laneOf(laneId).name;
+  const openChild = (childId: string) => setSelectedId(childId);
+
+  // 新規作成ダイアログに渡す下書き。保存されるまでIDは採番しない
+  const DRAFT_ID = "draft";
+  const draftParent = () =>
+    createParentItem({
+      id: DRAFT_ID,
+      summary: "",
+      laneId: findLaneByRole(settings.lanes, "pbl").id,
+    });
+  const draftChild = (parentId: string | null) =>
+    createChildItem({
+      id: DRAFT_ID,
+      parentId,
+      description: "",
+      laneId: findLaneByRole(settings.lanes, "sbl").id,
+    });
 
   // 子カードに表示する親の名前（親なしの子ではundefinedのまま）
   const parentNameOf = (childId: string) => {
@@ -234,8 +259,8 @@ export function BoardView() {
         lanes={settings.lanes}
         laneContent={laneContent}
         laneCounts={laneCounts}
-        onAddParent={() => addParent({ summary: "新規アイテム" })}
-        onAddChild={() => addChild({ description: "新規子アイテム" })}
+        onAddParent={() => setDraft({ kind: "parent" })}
+        onAddChild={() => setDraft({ kind: "child", parentId: null })}
       />
       <DragOverlay dropAnimation={null}>
         {activeId !== null && (
@@ -256,10 +281,7 @@ export function BoardView() {
             setContextMenu(null);
           }}
           onAddChild={() => {
-            addChild({
-              parentId: contextMenu.itemId,
-              description: "新規子アイテム",
-            });
+            setDraft({ kind: "child", parentId: contextMenu.itemId });
             setContextMenu(null);
           }}
           onToggleParentFilter={() => {
@@ -285,6 +307,39 @@ export function BoardView() {
           </button>
         </div>
       )}
+      {draft?.kind === "parent" && (
+        <ParentItemDetail
+          isNew
+          item={draftParent()}
+          laneName={findLaneByRole(settings.lanes, "pbl").name}
+          children_={[]}
+          laneNameOf={laneNameOf}
+          onOpenChild={openChild}
+          onSave={(patch) => {
+            addParent(patch);
+            setDraft(null);
+          }}
+          onClose={() => setDraft(null)}
+        />
+      )}
+      {draft?.kind === "child" && (
+        <ChildItemDetail
+          isNew
+          item={draftChild(draft.parentId)}
+          parentLabels={
+            draft.parentId !== null ? parents[draft.parentId].labels : []
+          }
+          parentName={displayName(
+            draft.parentId !== null ? parents[draft.parentId] : null,
+          )}
+          laneName={findLaneByRole(settings.lanes, "sbl").name}
+          onSave={(patch) => {
+            addChild({ ...patch, parentId: draft.parentId });
+            setDraft(null);
+          }}
+          onClose={() => setDraft(null)}
+        />
+      )}
       {selectedParent && (
         <ParentItemDetail
           item={selectedParent}
@@ -292,18 +347,15 @@ export function BoardView() {
           children_={selectedParent.childIds.map(
             (childId) => children[childId],
           )}
-          laneNameOf={(laneId) => laneOf(laneId).name}
-          onOpenChild={(childId) => setSelectedId(childId)}
+          laneNameOf={laneNameOf}
+          onOpenChild={openChild}
           onSave={(patch) => {
             updateParent(selectedParent.id, patch);
             closeDetail();
           }}
           onClose={closeDetail}
           onAddChild={() => {
-            addChild({
-              parentId: selectedParent.id,
-              description: "新規子アイテム",
-            });
+            setDraft({ kind: "child", parentId: selectedParent.id });
             closeDetail();
           }}
         />
