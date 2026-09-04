@@ -315,6 +315,17 @@ body {
   vertical-align: middle;
 }
 
+/* 子アイテムがSBLを出て着手されたことを、PBLに残る親カード側で示す */
+.started-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  color: #9a6700;
+  background-color: #fff8c5;
+  border-radius: 8px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
+
 .ready-section {
   display: flex;
   flex-direction: column;

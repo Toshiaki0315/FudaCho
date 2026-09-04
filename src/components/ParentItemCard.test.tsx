@@ -130,4 +130,54 @@ describe("ParentItemCard", () => {
     render(<ParentItemCard item={parent()} children_={[]} lanes={lanes} />);
     expect(screen.getByRole("progressbar")).toBeInTheDocument();
   });
+
+  it("子アイテムがSBLの外へ出たら着手済みであることを表示する", () => {
+    render(
+      <ParentItemCard
+        item={parent(["C-1", "C-2"])}
+        children_={[child("C-1", "lane-2"), child("C-2", "lane-3")]}
+        lanes={lanes}
+      />,
+    );
+    expect(screen.getByLabelText("着手済みの子アイテム")).toHaveTextContent(
+      "着手 1",
+    );
+  });
+
+  it("Close・Dropへ動いた子アイテムも着手済みとして数える", () => {
+    render(
+      <ParentItemCard
+        item={parent(["C-1", "C-2", "C-3"])}
+        children_={[
+          child("C-1", "lane-2"),
+          child("C-2", "lane-4"),
+          child("C-3", "lane-5"),
+        ]}
+        lanes={lanes}
+      />,
+    );
+    expect(screen.getByLabelText("着手済みの子アイテム")).toHaveTextContent(
+      "着手 2",
+    );
+  });
+
+  it("すべての子アイテムがSBLにいる間は着手表示を出さない", () => {
+    render(
+      <ParentItemCard
+        item={parent(["C-1"])}
+        children_={[child("C-1", "lane-2")]}
+        lanes={lanes}
+      />,
+    );
+    expect(
+      screen.queryByLabelText("着手済みの子アイテム"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("子アイテムがない親には着手表示を出さない", () => {
+    render(<ParentItemCard item={parent()} children_={[]} lanes={lanes} />);
+    expect(
+      screen.queryByLabelText("着手済みの子アイテム"),
+    ).not.toBeInTheDocument();
+  });
 });

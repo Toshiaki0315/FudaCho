@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { createChildItem } from "./childItem";
 import { createDefaultLanes } from "./lane";
-import { calculateProgress, childProgressCounts } from "./progress";
+import {
+  calculateProgress,
+  childProgressCounts,
+  startedChildCount,
+} from "./progress";
 
 // デフォルトレーン: lane-1=PBL, lane-2=SBL, lane-3=作業中(自由), lane-4=Close, lane-5=Drop
 const lanes = createDefaultLanes();
@@ -66,5 +70,26 @@ describe("calculateProgress", () => {
   it("全子アイテムがDropの場合は0を返す", () => {
     const children = [child("C-1", "lane-5"), child("C-2", "lane-5")];
     expect(calculateProgress(children, lanes)).toBe(0);
+  });
+});
+
+describe("startedChildCount", () => {
+  it("SBLの外にいる子アイテムの数を返す（自由レーン・Close・Drop）", () => {
+    const children = [
+      child("C-1", "lane-2"),
+      child("C-2", "lane-3"),
+      child("C-3", "lane-4"),
+      child("C-4", "lane-5"),
+    ];
+    expect(startedChildCount(children, lanes)).toBe(3);
+  });
+
+  it("すべてSBLにいる場合は0を返す", () => {
+    const children = [child("C-1", "lane-2"), child("C-2", "lane-2")];
+    expect(startedChildCount(children, lanes)).toBe(0);
+  });
+
+  it("子アイテムがない場合は0を返す", () => {
+    expect(startedChildCount([], lanes)).toBe(0);
   });
 });

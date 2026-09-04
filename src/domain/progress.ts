@@ -28,3 +28,16 @@ export function calculateProgress(
   }
   return done / total;
 }
+
+/**
+ * 着手済みの子アイテム数 = SBL（タスク一覧）の外にいる子アイテムの数。
+ * 自由レーン・Close・Drop のいずれも「一度は動かした」ものとして数える。
+ */
+export function startedChildCount(
+  children: readonly ChildItem[],
+  lanes: readonly Lane[],
+): number {
+  const roleById = new Map(lanes.map((lane) => [lane.id, lane.role]));
+  return children.filter((child) => roleById.get(child.laneId) !== "sbl")
+    .length;
+}
