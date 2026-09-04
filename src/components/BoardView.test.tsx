@@ -244,6 +244,43 @@ describe("BoardView", () => {
       expect(screen.queryByText("独立タスク")).not.toBeInTheDocument();
     });
 
+    it("Readyな親の右クリックメニューから子アイテムを作成できる", async () => {
+      const user = userEvent.setup();
+      useBoardStore
+        .getState()
+        .addParent({ summary: "設計する", reason: "理由", ready: true });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      await user.click(
+        screen.getByRole("menuitem", { name: "＋子アイテムを追加" }),
+      );
+      const state = useBoardStore.getState();
+      expect(state.children["C-1"].parentId).toBe("P-1");
+      // 作成先はSBLレーン
+      expect(state.children["C-1"].laneId).toBe("lane-2");
+      expect(state.parents["P-1"].childIds).toEqual(["C-1"]);
+      // メニューは閉じる
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
+
+    it("Readyでない親の右クリックメニューでは子アイテムを追加できない", () => {
+      useBoardStore.getState().addParent({ summary: "設計する" });
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("設計する"));
+      expect(
+        screen.getByRole("menuitem", { name: "＋子アイテムを追加" }),
+      ).toBeDisabled();
+    });
+
+    it("子カードの右クリックメニューには子アイテムの追加は表示されない", () => {
+      seedTwoFamilies();
+      render(<BoardView />);
+      fireEvent.contextMenu(screen.getByText("独立タスク"));
+      expect(
+        screen.queryByRole("menuitem", { name: "＋子アイテムを追加" }),
+      ).not.toBeInTheDocument();
+    });
+
     it("子カードの右クリックメニューには親絞り込みは表示されない", () => {
       seedTwoFamilies();
       render(<BoardView />);
@@ -436,13 +473,14 @@ describe("BoardView", () => {
   });
 
   describe("右クリックメニュー", () => {
-    it("PBL/SBLのアイテムは詳細表示・Drop・削除のメニューが表示される", () => {
+    it("PBL/SBLのアイテムは詳細表示・子追加・絞り込み・Drop・削除のメニューが表示される", () => {
       useBoardStore.getState().addParent({ summary: "設計する" });
       render(<BoardView />);
       fireEvent.contextMenu(screen.getByText("設計する"));
       const items = screen.getAllByRole("menuitem");
       expect(items.map((i) => i.textContent)).toEqual([
         "詳細表示",
+        "＋子アイテムを追加",
         "この親で絞り込み",
         "Drop",
         "削除",

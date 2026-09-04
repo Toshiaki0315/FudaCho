@@ -11,7 +11,9 @@ function renderMenu(overrides: Partial<Parameters<typeof ItemContextMenu>[0]>) {
     isFiltered: false,
     showDrop: true,
     canDrop: true,
+    canAddChild: true,
     onShowDetail: vi.fn(),
+    onAddChild: vi.fn(),
     onToggleParentFilter: vi.fn(),
     onDrop: vi.fn(),
     onDelete: vi.fn(),
@@ -104,5 +106,31 @@ describe("ItemContextMenu", () => {
     backdrop.dispatchEvent(event);
     expect(props.onClose).toHaveBeenCalled();
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("子アイテムでは子アイテムの追加メニューを表示しない", () => {
+    renderMenu({ isParent: false });
+    expect(
+      screen.queryByRole("menuitem", { name: "＋子アイテムを追加" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("親アイテムでは子アイテムの追加メニューを表示する", async () => {
+    const user = userEvent.setup();
+    const props = renderMenu({ isParent: true });
+    await user.click(
+      screen.getByRole("menuitem", { name: "＋子アイテムを追加" }),
+    );
+    expect(props.onAddChild).toHaveBeenCalled();
+  });
+
+  it("Readyでない親では子アイテムの追加メニューは押せない", () => {
+    renderMenu({ isParent: true, canAddChild: false });
+    const item = screen.getByRole("menuitem", { name: "＋子アイテムを追加" });
+    expect(item).toBeDisabled();
+    expect(item).toHaveAttribute(
+      "title",
+      "子アイテムの追加はReadyにしてから行えます",
+    );
   });
 });

@@ -10,7 +10,10 @@ interface ItemContextMenuProps {
   showDrop: boolean;
   /** DropレーンがWIP制限に達している間は押せない */
   canDrop: boolean;
+  /** 子アイテムを追加できるか（親がReadyのときのみ。親詳細の追加ボタンと同条件） */
+  canAddChild: boolean;
   onShowDetail: () => void;
+  onAddChild: () => void;
   onToggleParentFilter: () => void;
   onDrop: () => void;
   onDelete: () => void;
@@ -25,7 +28,9 @@ export function ItemContextMenu({
   isFiltered,
   showDrop,
   canDrop,
+  canAddChild,
   onShowDetail,
+  onAddChild,
   onToggleParentFilter,
   onDrop,
   onDelete,
@@ -46,6 +51,21 @@ export function ItemContextMenu({
         <button type="button" role="menuitem" onClick={onShowDetail}>
           詳細表示
         </button>
+        {isParent && (
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!canAddChild}
+            title={
+              canAddChild
+                ? undefined
+                : "子アイテムの追加はReadyにしてから行えます"
+            }
+            onClick={onAddChild}
+          >
+            ＋子アイテムを追加
+          </button>
+        )}
         {isParent && (
           <button type="button" role="menuitem" onClick={onToggleParentFilter}>
             {isFiltered ? "絞り込みを解除" : "この親で絞り込み"}

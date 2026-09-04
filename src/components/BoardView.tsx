@@ -250,8 +250,16 @@ export function BoardView() {
           isFiltered={activeParentFilter === contextMenu.itemId}
           showDrop={showDropMenu}
           canDrop={canDrop}
+          canAddChild={parents[contextMenu.itemId]?.ready === true}
           onShowDetail={() => {
             setSelectedId(contextMenu.itemId);
+            setContextMenu(null);
+          }}
+          onAddChild={() => {
+            addChild({
+              parentId: contextMenu.itemId,
+              description: "新規子アイテム",
+            });
             setContextMenu(null);
           }}
           onToggleParentFilter={() => {
