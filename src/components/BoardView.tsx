@@ -14,7 +14,6 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { displayName } from "../domain/itemName";
 import { canAcceptMore, findLaneByRole } from "../domain/lane";
-import { mergeLabels } from "../domain/labels";
 import { useBoardStore } from "../store/boardStore";
 import { ChildItemCard } from "./ChildItemCard";
 import { ChildItemDetail } from "./ChildItemDetail";
@@ -24,6 +23,7 @@ import { KanbanBoard } from "./KanbanBoard";
 import { ParentItemCard } from "./ParentItemCard";
 import { ParentItemDetail } from "./ParentItemDetail";
 import { SortableCard } from "./SortableCard";
+import { useItemFilters } from "./useItemFilters";
 
 interface LaneDropAreaProps {
   laneId: string;
@@ -61,24 +61,23 @@ export function BoardView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // ドラッグ中のアイテムID。DragOverlayに複製カードを表示するために保持する
   const [activeId, setActiveId] = useState<string | null>(null);
-  // ラベル絞り込み（AND条件）。カードのラベルチップをクリックで追加/解除する
-  const [labelFilters, setLabelFilters] = useState<string[]>([]);
-  // 親アイテム絞り込み。親カードの右クリックメニューで設定し、その親と子だけを表示する
-  const [parentFilter, setParentFilter] = useState<string | null>(null);
+  const {
+    labelFilters,
+    activeParentFilter,
+    isFiltering,
+    effectiveLabelsOf,
+    toggleLabelFilter,
+    toggleParentFilter,
+    clearParentFilter,
+    clearAll,
+    matchesFilter,
+  } = useItemFilters(parents, children);
   // 右クリックで開くコンテキストメニュー
   const [contextMenu, setContextMenu] = useState<{
     itemId: string;
     x: number;
     y: number;
   } | null>(null);
-
-  const toggleLabelFilter = (label: string) => {
-    setLabelFilters((current) =>
-      current.includes(label)
-        ? current.filter((l) => l !== label)
-        : [...current, label],
-    );
-  };
 
   // 通知は数秒後に自動で消える
   useEffect(() => {
@@ -98,39 +97,6 @@ export function BoardView() {
   );
   const dropLane = findLaneByRole(settings.lanes, "drop");
   const canDrop = canAcceptMore(dropLane, laneCounts[dropLane.id]);
-
-  // 子アイテムの実効ラベル = 親のラベル + 独自ラベル（親の変更が自動で引き継がれる）
-  const effectiveLabelsOf = (childId: string) => {
-    const child = children[childId];
-    const parentLabels =
-      child.parentId !== null ? parents[child.parentId].labels : [];
-    return mergeLabels(parentLabels, child.labels);
-  };
-
-  // 絞り込み対象の親が削除された場合は絞り込みを無効化する
-  const activeParentFilter =
-    parentFilter !== null && parents[parentFilter] !== undefined
-      ? parentFilter
-      : null;
-
-  const matchesParentFilter = (itemId: string) => {
-    if (activeParentFilter === null || itemId === activeParentFilter) {
-      return true;
-    }
-    return children[itemId]?.parentId === activeParentFilter;
-  };
-
-  const matchesLabelFilter = (itemId: string) => {
-    if (labelFilters.length === 0) {
-      return true;
-    }
-    const parent = parents[itemId];
-    const itemLabels = parent ? parent.labels : effectiveLabelsOf(itemId);
-    return labelFilters.every((label) => itemLabels.includes(label));
-  };
-
-  const matchesFilter = (itemId: string) =>
-    matchesParentFilter(itemId) && matchesLabelFilter(itemId);
 
   const renderCard = (itemId: string) => {
     const parent = parents[itemId];
@@ -225,7 +191,7 @@ export function BoardView() {
         applyDragEnd(event);
       }}
     >
-      {(labelFilters.length > 0 || activeParentFilter !== null) && (
+      {isFiltering && (
         <div className="label-filter-bar">
           <span>絞り込み中:</span>
           {activeParentFilter !== null && (
@@ -233,7 +199,7 @@ export function BoardView() {
               type="button"
               className="label-chip parent-filter-chip"
               aria-label={`親アイテム「${filterParentName}」の絞り込みを解除`}
-              onClick={() => setParentFilter(null)}
+              onClick={clearParentFilter}
             >
               親: {filterParentName} ✕
             </button>
@@ -249,13 +215,7 @@ export function BoardView() {
               {label} ✕
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              setLabelFilters([]);
-              setParentFilter(null);
-            }}
-          >
+          <button type="button" onClick={clearAll}>
             すべて解除
           </button>
         </div>
@@ -277,7 +237,7 @@ export function BoardView() {
           x={contextMenu.x}
           y={contextMenu.y}
           isParent={parents[contextMenu.itemId] !== undefined}
-          isFiltered={parentFilter === contextMenu.itemId}
+          isFiltered={activeParentFilter === contextMenu.itemId}
           showDrop={showDropMenu}
           canDrop={canDrop}
           onShowDetail={() => {
@@ -285,9 +245,7 @@ export function BoardView() {
             setContextMenu(null);
           }}
           onToggleParentFilter={() => {
-            setParentFilter(
-              parentFilter === contextMenu.itemId ? null : contextMenu.itemId,
-            );
+            toggleParentFilter(contextMenu.itemId);
             setContextMenu(null);
           }}
           onDrop={() => {
