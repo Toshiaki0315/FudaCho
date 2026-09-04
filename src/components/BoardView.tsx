@@ -19,6 +19,7 @@ import { useBoardStore } from "../store/boardStore";
 import { ChildItemCard } from "./ChildItemCard";
 import { ChildItemDetail } from "./ChildItemDetail";
 import { composeDragHandler } from "./dnd";
+import { ItemContextMenu } from "./ItemContextMenu";
 import { KanbanBoard } from "./KanbanBoard";
 import { ParentItemCard } from "./ParentItemCard";
 import { ParentItemDetail } from "./ParentItemDetail";
@@ -272,75 +273,33 @@ export function BoardView() {
         )}
       </DragOverlay>
       {contextMenu !== null && (
-        <>
-          <div
-            className="context-menu-backdrop"
-            aria-label="メニューを閉じる"
-            onClick={() => setContextMenu(null)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setContextMenu(null);
-            }}
-          />
-          <div
-            role="menu"
-            className="context-menu"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setSelectedId(contextMenu.itemId);
-                setContextMenu(null);
-              }}
-            >
-              詳細表示
-            </button>
-            {parents[contextMenu.itemId] !== undefined && (
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setParentFilter(
-                    parentFilter === contextMenu.itemId
-                      ? null
-                      : contextMenu.itemId,
-                  );
-                  setContextMenu(null);
-                }}
-              >
-                {parentFilter === contextMenu.itemId
-                  ? "絞り込みを解除"
-                  : "この親で絞り込み"}
-              </button>
-            )}
-            {showDropMenu && (
-              <button
-                type="button"
-                role="menuitem"
-                disabled={!canDrop}
-                onClick={() => {
-                  dropItem(contextMenu.itemId);
-                  setContextMenu(null);
-                }}
-              >
-                Drop
-              </button>
-            )}
-            <button
-              type="button"
-              role="menuitem"
-              className="danger"
-              onClick={() => {
-                deleteItem(contextMenu.itemId);
-                setContextMenu(null);
-              }}
-            >
-              削除
-            </button>
-          </div>
-        </>
+        <ItemContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          isParent={parents[contextMenu.itemId] !== undefined}
+          isFiltered={parentFilter === contextMenu.itemId}
+          showDrop={showDropMenu}
+          canDrop={canDrop}
+          onShowDetail={() => {
+            setSelectedId(contextMenu.itemId);
+            setContextMenu(null);
+          }}
+          onToggleParentFilter={() => {
+            setParentFilter(
+              parentFilter === contextMenu.itemId ? null : contextMenu.itemId,
+            );
+            setContextMenu(null);
+          }}
+          onDrop={() => {
+            dropItem(contextMenu.itemId);
+            setContextMenu(null);
+          }}
+          onDelete={() => {
+            deleteItem(contextMenu.itemId);
+            setContextMenu(null);
+          }}
+          onClose={() => setContextMenu(null)}
+        />
       )}
       {notice !== null && (
         <div role="alert" className="board-notice">
