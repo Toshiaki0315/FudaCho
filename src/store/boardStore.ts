@@ -236,8 +236,21 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           return "未完了の子アイテムがあるためCloseできません";
         }
       }
-    } else if (toLane.role === "pbl") {
-      return "子アイテムはPBLレーンへ移動できません";
+    } else {
+      if (toLane.role === "pbl") {
+        return "子アイテムはPBLレーンへ移動できません";
+      }
+      // 親を持つ子は、親がReadyになるまでSBLに留め置く。
+      // ただしDrop（中断）は着手ではないため妨げない（削除も同様に制限しない）。
+      const fromLane = settings.lanes.find((lane) => lane.id === child.laneId);
+      if (
+        fromLane?.role === "sbl" &&
+        toLane.role !== "drop" &&
+        child.parentId !== null &&
+        !parents[child.parentId].ready
+      ) {
+        return "親アイテムがReadyになるまでSBLから移動できません";
+      }
     }
     if (!canAcceptMore(toLane, laneOrder[toLaneId].length)) {
       return wipLimitReachedMessage(toLane);

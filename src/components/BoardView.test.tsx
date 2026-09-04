@@ -162,9 +162,10 @@ describe("BoardView", () => {
 
   it("親詳細の子アイテム一覧から子の詳細を開ける", async () => {
     const user = userEvent.setup();
+    // 子をSBLの外へ動かすには親がReadyである必要がある
     const parentId = useBoardStore
       .getState()
-      .addParent({ summary: "設計する" });
+      .addParent({ summary: "設計する", reason: "理由", ready: true });
     useBoardStore.getState().addChild({ parentId, description: "図を描く" });
     useBoardStore.getState().moveItem("C-1", "lane-3");
     render(<BoardView />);

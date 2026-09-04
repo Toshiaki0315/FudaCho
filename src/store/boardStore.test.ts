@@ -105,13 +105,70 @@ describe("boardStore", () => {
     });
 
     it("全子アイテムがClose/Drop済みなら親をCloseできる", () => {
-      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      // 子をSBLの外へ動かすには親がReadyである必要がある
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "A", reason: "理由", ready: true });
       useBoardStore.getState().addChild({ parentId, description: "作業1" });
       useBoardStore.getState().addChild({ parentId, description: "作業2" });
       useBoardStore.getState().moveItem("C-1", "lane-4");
       useBoardStore.getState().moveItem("C-2", "lane-5");
       useBoardStore.getState().moveItem("P-1", "lane-4");
       expect(useBoardStore.getState().parents["P-1"].laneId).toBe("lane-4");
+    });
+
+    it("親がReadyでない子アイテムはSBLから移動できない", () => {
+      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addChild({ parentId, description: "作業" });
+      expect(() => useBoardStore.getState().moveItem("C-1", "lane-3")).toThrow(
+        /親アイテムがReady/,
+      );
+      expect(() => useBoardStore.getState().moveItem("C-1", "lane-4")).toThrow(
+        /親アイテムがReady/,
+      );
+      expect(useBoardStore.getState().children["C-1"].laneId).toBe("lane-2");
+    });
+
+    it("親がReadyになれば子アイテムはSBLから移動できる", () => {
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "A", reason: "理由" });
+      useBoardStore.getState().addChild({ parentId, description: "作業" });
+      useBoardStore.getState().updateParent(parentId, { ready: true });
+      useBoardStore.getState().moveItem("C-1", "lane-3");
+      expect(useBoardStore.getState().children["C-1"].laneId).toBe("lane-3");
+    });
+
+    it("親がReadyでなくても子アイテムはDropできる（中断は妨げない）", () => {
+      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addChild({ parentId, description: "作業" });
+      useBoardStore.getState().moveItem("C-1", "lane-5");
+      expect(useBoardStore.getState().children["C-1"].laneId).toBe("lane-5");
+    });
+
+    it("親がReadyでなくても子アイテムは削除できる", () => {
+      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      useBoardStore.getState().addChild({ parentId, description: "作業" });
+      useBoardStore.getState().deleteItem("C-1");
+      expect(useBoardStore.getState().children["C-1"]).toBeUndefined();
+    });
+
+    it("親なしの子アイテムはReadyに関係なくSBLから移動できる", () => {
+      useBoardStore.getState().addChild({ description: "単独作業" });
+      useBoardStore.getState().moveItem("C-1", "lane-3");
+      expect(useBoardStore.getState().children["C-1"].laneId).toBe("lane-3");
+    });
+
+    it("SBLを出た後に親がReadyでなくなっても、子アイテムは移動し続けられる", () => {
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "A", reason: "理由" });
+      useBoardStore.getState().addChild({ parentId, description: "作業" });
+      useBoardStore.getState().updateParent(parentId, { ready: true });
+      useBoardStore.getState().moveItem("C-1", "lane-3");
+      useBoardStore.getState().updateParent(parentId, { ready: false });
+      useBoardStore.getState().moveItem("C-1", "lane-4");
+      expect(useBoardStore.getState().children["C-1"].laneId).toBe("lane-4");
     });
 
     it("子アイテムはPBL以外のレーンへ移動できる", () => {
@@ -354,7 +411,9 @@ describe("boardStore", () => {
 
   describe("dropItem（Drop = データ保持したままDropレーンへ）", () => {
     it("親アイテムをDropすると子アイテムもすべてDropされる", () => {
-      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "A", reason: "理由", ready: true });
       useBoardStore.getState().addChild({ parentId, description: "作業1" });
       useBoardStore.getState().addChild({ parentId, description: "作業2" });
       useBoardStore.getState().moveItem("C-2", "lane-4");
@@ -375,7 +434,9 @@ describe("boardStore", () => {
     });
 
     it("D&Dで親アイテムをDropレーンへ移動すると子アイテムもすべてDropされる", () => {
-      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "A", reason: "理由", ready: true });
       useBoardStore.getState().addChild({ parentId, description: "作業1" });
       useBoardStore.getState().addChild({ parentId, description: "作業2" });
       useBoardStore.getState().moveItem("C-2", "lane-3");
@@ -450,7 +511,9 @@ describe("boardStore", () => {
     });
 
     it("親アイテムを削除すると子アイテムもすべて削除される", () => {
-      const parentId = useBoardStore.getState().addParent({ summary: "A" });
+      const parentId = useBoardStore
+        .getState()
+        .addParent({ summary: "A", reason: "理由", ready: true });
       useBoardStore.getState().addChild({ parentId, description: "作業1" });
       useBoardStore.getState().moveItem("C-1", "lane-3");
       useBoardStore.getState().deleteItem("P-1");
