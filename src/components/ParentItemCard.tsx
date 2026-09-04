@@ -1,4 +1,5 @@
 import type { ChildItem } from "../domain/childItem";
+import { displayName } from "../domain/itemName";
 import type { Lane } from "../domain/lane";
 import type { ParentItem } from "../domain/parentItem";
 import { calculateProgress, childProgressCounts } from "../domain/progress";
@@ -27,7 +28,7 @@ export function ParentItemCard({
         📋
       </span>
       <span className="item-id">
-        {item.title !== "" ? item.title : item.id}
+        {displayName(item)}
         {item.ready && <span className="ready-badge">Ready</span>}
       </span>
       <p className="item-summary">{item.summary}</p>

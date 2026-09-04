@@ -12,6 +12,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useEffect, useState, type ReactNode } from "react";
+import { displayName } from "../domain/itemName";
 import { canAcceptMore, findLaneByRole } from "../domain/lane";
 import { mergeLabels } from "../domain/labels";
 import { useBoardStore } from "../store/boardStore";
@@ -210,14 +211,8 @@ export function BoardView() {
     contextMenuLaneRole !== "drop";
 
   // フィルターバーに表示する親の名前（タイトル優先、なければID）
-  const filterParent =
-    activeParentFilter !== null ? parents[activeParentFilter] : null;
   const filterParentName =
-    filterParent !== null
-      ? filterParent.title !== ""
-        ? filterParent.title
-        : filterParent.id
-      : "";
+    activeParentFilter !== null ? displayName(parents[activeParentFilter]) : "";
 
   return (
     <DndContext
@@ -386,13 +381,11 @@ export function BoardView() {
               ? parents[selectedChild.parentId].labels
               : []
           }
-          parentName={
+          parentName={displayName(
             selectedChild.parentId !== null
-              ? parents[selectedChild.parentId].title !== ""
-                ? parents[selectedChild.parentId].title
-                : parents[selectedChild.parentId].id
-              : "なし"
-          }
+              ? parents[selectedChild.parentId]
+              : null,
+          )}
           laneName={laneOf(selectedChild.laneId).name}
           onSave={(patch) => {
             updateChild(selectedChild.id, patch);

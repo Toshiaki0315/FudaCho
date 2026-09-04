@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ChildItem } from "../domain/childItem";
+import { displayName } from "../domain/itemName";
 import {
   FIBONACCI_SIZES,
   isReadyEligible,
@@ -212,7 +213,7 @@ export function ParentItemDetail({
                   <li key={child.id}>
                     <button type="button" onClick={() => onOpenChild(child.id)}>
                       <span className="child-item-name">
-                        {child.title !== "" ? child.title : child.id}
+                        {displayName(child)}
                       </span>
                       <span className="child-item-desc">
                         {child.description}

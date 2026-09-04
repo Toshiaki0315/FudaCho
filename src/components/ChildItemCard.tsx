@@ -1,4 +1,5 @@
 import type { ChildItem } from "../domain/childItem";
+import { displayName } from "../domain/itemName";
 import { LabelChips } from "./LabelChips";
 
 interface ChildItemCardProps {
@@ -18,9 +19,7 @@ export function ChildItemCard({
       <span className="item-badge" role="img" aria-label="子アイテム">
         📝
       </span>
-      <span className="item-id">
-        {item.title !== "" ? item.title : item.id}
-      </span>
+      <span className="item-id">{displayName(item)}</span>
       <p className="item-summary">{item.description}</p>
       <LabelChips labels={labels ?? item.labels} onLabelClick={onLabelClick} />
     </article>
