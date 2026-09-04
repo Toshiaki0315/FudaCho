@@ -92,6 +92,12 @@ export function BoardView() {
   const laneOf = (laneId: string) =>
     settings.lanes.find((lane) => lane.id === laneId)!;
 
+  // 子カードに表示する親の名前（親なしの子ではundefinedのまま）
+  const parentNameOf = (childId: string) => {
+    const parentId = children[childId].parentId;
+    return parentId !== null ? displayName(parents[parentId]) : undefined;
+  };
+
   const laneCounts = Object.fromEntries(
     settings.lanes.map((lane) => [lane.id, laneOrder[lane.id].length]),
   );
@@ -111,6 +117,7 @@ export function BoardView() {
       <ChildItemCard
         item={children[itemId]}
         labels={effectiveLabelsOf(itemId)}
+        parentName={parentNameOf(itemId)}
         onLabelClick={toggleLabelFilter}
       />
     );
@@ -159,7 +166,10 @@ export function BoardView() {
         lanes={settings.lanes}
       />
     ) : (
-      <ChildItemCard item={children[itemId]} />
+      <ChildItemCard
+        item={children[itemId]}
+        parentName={parentNameOf(itemId)}
+      />
     );
   };
 

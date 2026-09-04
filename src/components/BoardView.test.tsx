@@ -143,7 +143,9 @@ describe("BoardView", () => {
       name: "親から引き継いだラベル",
     });
     expect(within(inherited).getByText("設計")).toBeInTheDocument();
-    expect(screen.getByText("親: 画面設計")).toBeInTheDocument();
+    // カードにも親名が出るため、詳細ダイアログ内に限定して確認する
+    const detail = screen.getByRole("dialog", { name: "C-1 の詳細" });
+    expect(within(detail).getByText("親: 画面設計")).toBeInTheDocument();
   });
 
   it("親にタイトルがない場合、子詳細の「親:」には親IDが表示される", async () => {
@@ -154,7 +156,8 @@ describe("BoardView", () => {
     useBoardStore.getState().addChild({ parentId, description: "図を描く" });
     render(<BoardView />);
     await user.dblClick(screen.getByText("図を描く"));
-    expect(screen.getByText("親: P-1")).toBeInTheDocument();
+    const detail = screen.getByRole("dialog", { name: "C-1 の詳細" });
+    expect(within(detail).getByText("親: P-1")).toBeInTheDocument();
   });
 
   it("親詳細の子アイテム一覧から子の詳細を開ける", async () => {

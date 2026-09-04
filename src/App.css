@@ -410,6 +410,23 @@ body {
   color: #57606a;
 }
 
+/* SBLに親あり・親なしの子が並ぶため、カード上で親の有無を区別する */
+.child-parent {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #6639ba;
+  background-color: #f3effc;
+  border-radius: 8px;
+  padding: 1px 6px;
+}
+
+.child-parent.standalone {
+  color: #8c959f;
+  background-color: #f0f2f4;
+}
+
 .item-summary {
   grid-column: 1 / -1;
   margin: 4px 0;
